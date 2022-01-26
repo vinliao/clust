@@ -6,6 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-secp256k1 = "0.21.2"
-tungstenite = "0.16.0"
+secp256k1 = {version="0.21.2", features=["rand", "bitcoin_hashes"]}
+tungstenite = {version="0.16.0", features=["native-tls"]}
 url = "2.2.2"
