@@ -1,7 +1,16 @@
+use clap::Parser;
 mod publisher;
-mod signer;
+
+#[derive(Parser)]
+struct Cli {
+    command: String,
+    event: String
+}
 
 fn main() {
-    publisher::publish();
-    // signer::sign();
+    let args = Cli::parse();
+
+    if args.command == "publish" {
+        publisher::publish(args.event);
+    }
 }
