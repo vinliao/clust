@@ -7,6 +7,7 @@ use hex;
 use sha2::{Sha256, Digest};
 use rand::rngs::ThreadRng;
 use json::{array, object};
+use chrono::Local;
 
 // struct Event {
 //     id: String,
@@ -26,8 +27,6 @@ pub fn create_event(content: String) -> String {
     // 4. get sig
     // 5. create struct, return it
     
-    // time should be generated
-    let unix_time = 1643198791;
     
     // generate key
     let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
@@ -37,6 +36,9 @@ pub fn create_event(content: String) -> String {
 
     // create data
     // NIP-01 spec: [0, toHexString(publicKey), unixTime, 1, [], content];
+    let time = Local::now();
+    let unix_time = time.timestamp();
+
     let data = array![0, public_key.to_string(), unix_time, 1, [], content.to_string()];
     let data_string = data.dump();
 
