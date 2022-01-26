@@ -32,12 +32,11 @@ pub fn create_event(content: String) -> String {
     // generate key
     let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
     let schnorr = Schnorr::<Sha256, _>::new(nonce_gen.clone());
-    // Generate your public/private key-pair
     let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
     let (secret_key, public_key) = keypair.as_tuple();
 
     // create data
-    // [0, toHexString(publicKey), unixTime, 1, [], content];
+    // NIP-01 spec: [0, toHexString(publicKey), unixTime, 1, [], content];
     let data = array![0, public_key.to_string(), unix_time, 1, [], content.to_string()];
     let data_string = data.dump();
 
@@ -47,8 +46,9 @@ pub fn create_event(content: String) -> String {
     let event_id = hasher.finalize();    
     let event_id_hex = hex::encode(event_id);
 
-    let message = Message::<Public>::raw(data_string.as_bytes());
-    let signature = schnorr.sign(&keypair, message); // this signature isn't hex
+    // sign id
+    let message = Message::<Public>::raw(&event_id);
+    let signature = schnorr.sign(&keypair, message);
     let signature_bytes = signature.to_bytes();
     let signature_hex = hex::encode(signature_bytes);
 
