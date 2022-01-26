@@ -18,7 +18,7 @@ use json::{array, object};
 //     sig: String
 // }
 
-pub fn create_event() -> String {
+pub fn create_event(content: String) -> String {
     // steps:
     // 1. generate key
     // 2. hash data (as aligned in nip-01)
@@ -26,12 +26,10 @@ pub fn create_event() -> String {
     // 4. get sig
     // 5. create struct, return it
     
-    // content should be inputted, time should be generated
-    let content = "random message";
+    // time should be generated
     let unix_time = 1643198791;
     
     // generate key
-    // Use synthetic nonces
     let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
     let schnorr = Schnorr::<Sha256, _>::new(nonce_gen.clone());
     // Generate your public/private key-pair
@@ -45,12 +43,11 @@ pub fn create_event() -> String {
 
     // hash data
     let mut hasher = Sha256::new();
-    // dump turns it to string, as bytes turns it to byte array
     hasher.update(data_string.as_bytes());
     let event_id = hasher.finalize();    
     let event_id_hex = hex::encode(event_id);
 
-    let message = Message::<Public>::plain("asdf", data_string.as_bytes());
+    let message = Message::<Public>::raw(data_string.as_bytes());
     let signature = schnorr.sign(&keypair, message); // this signature isn't hex
     let signature_bytes = signature.to_bytes();
     let signature_hex = hex::encode(signature_bytes);

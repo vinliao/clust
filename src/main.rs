@@ -5,7 +5,7 @@ mod event;
 #[derive(Parser)]
 struct Cli {
     command: String,
-    event: String
+    content: String
 }
 
 fn main() {
@@ -13,10 +13,10 @@ fn main() {
 
     if args.command == "publish" {
         // publish signed event
-        publisher::publish(args.event);
+        publisher::publish(args.content);
     } else if args.command == "post" {
         // create signed event, then publish
-        let event = event::create_event();
+        let event = event::create_event(args.content);
         // publisher::publish(event);
     }
 }
