@@ -1,7 +1,7 @@
 // a bunch of generators
 
 use schnorr_fun::{
-fun::{marker::*, Scalar, nonce},
+fun::{Scalar, nonce},
     Schnorr,
 };
 use hex;
@@ -10,8 +10,7 @@ use rand::rngs::ThreadRng;
 use serde_json::json;
 use chrono::Local;
 use std::fs;
-use secp256k1::{Secp256k1, Message, SecretKey, PublicKey};
-use secp256k1::hashes::sha256;
+use secp256k1::{Secp256k1, Message, SecretKey};
 
 // use schnorr_fun for key generation
 // but use secp256k1 for everything else cryptography related
@@ -27,6 +26,7 @@ pub fn generate_key() -> (String, String) {
 pub fn generate_event(content: String) -> serde_json::Value {
     // get usable privkey from privkey hexstring
     // todo: use config file
+    // idea: maybe private key as param
     let privkey_hex = "38d23a761454f281a70de8de2607469206c9945bd335f56d9eb8458f5462c7c1";
     let privkey_byte_array = hex::decode(privkey_hex).unwrap();
     let secp = Secp256k1::new();
@@ -44,7 +44,8 @@ pub fn generate_event(content: String) -> serde_json::Value {
     let event_id = get_event_id(pubkey.to_string(), content.to_string(), unix_time);
 
     // sign id
-    let message = Message::from_hashed_data::<sha256::Hash>("Hello World!".as_bytes());
+    let event_id_byte = hex::decode(event_id.clone()).unwrap();
+    let message = Message::from_slice(&event_id_byte[..]).expect("32 bytes, within curve order");
     let sig = secp.sign_schnorr(&message, &keypair);
 
     let event = json!({
