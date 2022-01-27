@@ -66,3 +66,26 @@ pub fn generate_event(content: String) -> serde_json::Value {
 
     return event;
 }
+
+// todo: use these functions to access nostr
+// from posting to getting data
+pub fn generate_rc() {
+    // generate .clustrc, which has this pattern:
+    // {privkey: privkey_hex, relays: ["wss://something", "wss://something"]}
+}
+
+// all these functions put in util.rs
+pub fn set_privkey() {
+    use std::fs;
+
+    let data = fs::read_to_string("config.json").expect("Unable to read file");
+    println!("{}", data);
+}
+
+pub fn add_relay() {
+    // add a relay to .clustrc
+}
+
+pub fn remove_relay() {
+    // remove a relay to .clustrc
+}

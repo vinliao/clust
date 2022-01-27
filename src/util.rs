@@ -8,8 +8,12 @@ pub fn get_privkey() -> String {
     return json_data["privkey"].to_string();
 }
 
-pub fn set_privkey() {
-    // set privkey
+pub fn set_privkey(privkey: String) {
+    let data = fs::read_to_string("clust.json").expect("Unable to read file");
+    let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
+
+    json_data["privkey"] = serde_json::Value::String(privkey);
+    fs::write("clust.json", json_data.to_string());
 }
 
 pub fn add_relay() {

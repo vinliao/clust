@@ -2,6 +2,7 @@ use clap::Parser;
 mod publisher;
 mod generator;
 mod getter;
+mod util;
 
 #[derive(Parser)]
 struct Cli {
@@ -25,5 +26,7 @@ fn main() {
         // todo: mnemonic
         println!("Private key: {}", privkey);
         println!("Public key: {}", pubkey);
+    } else if args.command == "set-private" {
+        util::set_privkey(args.content);
     }
 }
