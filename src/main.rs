@@ -1,6 +1,7 @@
 use clap::Parser;
 mod publisher;
 mod event;
+mod generator;
 mod getter;
 
 #[derive(Parser)]
@@ -16,8 +17,7 @@ fn main() {
         // publish signed event
         publisher::publish(args.content);
     } else if args.command == "post" {
-        // create signed event, then publish
-        let event = event::create_event(args.content);
+        let event = generator::generate_event(args.content);
         publisher::publish(event);
     } else if args.command == "get" {
         getter::get_event();
