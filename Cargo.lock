@@ -136,7 +136,6 @@ dependencies = [
  "clap",
  "hex",
  "rand 0.8.4",
- "schnorr_fun",
  "secp256k1",
  "serde_json",
  "sha2",
@@ -699,15 +698,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "schnorr_fun"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56d5233dbbce524495ee58f72da40d078efbded2d2ef5b68dce186774fdf4c3b"
-dependencies = [
- "secp256kfun",
-]
-
-[[package]]
 name = "secp256k1"
 version = "0.21.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -725,30 +715,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "957da2573cde917463ece3570eab4a0b3f19de6f1646cde62e6fd3868f566036"
 dependencies = [
  "cc",
-]
-
-[[package]]
-name = "secp256kfun"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b456d5d74840f07fe43396a29ac144cfdf32acf980f399d30b38d5b170c8239b"
-dependencies = [
- "digest",
- "rand_core 0.6.3",
- "secp256kfun_k256_backend",
- "serde",
- "subtle-ng",
-]
-
-[[package]]
-name = "secp256kfun_k256_backend"
-version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99c96aa7609ff3b24fcad38cf4c39712f063e06c23a1af043a3e1111aac75cbc"
-dependencies = [
- "cfg-if",
- "generic-array",
- "subtle-ng",
 ]
 
 [[package]]
@@ -779,20 +745,6 @@ name = "serde"
 version = "1.0.136"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ce31e24b01e1e524df96f1c2fdd054405f8d7376249a5110886fb4b658484789"
-dependencies = [
- "serde_derive",
-]
-
-[[package]]
-name = "serde_derive"
-version = "1.0.136"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08597e7152fcd306f41838ed3e37be9eaeed2b61c42e2117266a554fab4662f9"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
 
 [[package]]
 name = "serde_json"
@@ -836,12 +788,6 @@ name = "strsim"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
-
-[[package]]
-name = "subtle-ng"
-version = "2.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "734676eb262c623cec13c3155096e08d1f8f29adce39ba17948b18dad1e54142"
 
 [[package]]
 name = "syn"

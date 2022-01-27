@@ -10,4 +10,4 @@ APIs:
 Backend to-do:
 - [ ] use `serde` and struct instead of throwing strings around
 - [ ] use config file to store keys and subscriptions
-- [ ] replace `schnorr_fun` with `secp256k1`
+- [x] replace `schnorr_fun` with `secp256k1`

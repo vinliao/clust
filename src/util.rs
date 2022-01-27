@@ -1,26 +1,21 @@
 // a bunch of generators
 
-use schnorr_fun::{
-fun::{Scalar, nonce},
-    Schnorr,
-};
 use hex;
 use sha2::{Sha256, Digest};
-use rand::rngs::ThreadRng;
 use serde_json::json;
 use chrono::Local;
 use std::fs;
 use secp256k1::{Secp256k1, Message, SecretKey};
+use secp256k1::rand::rngs::OsRng;
 
-// use schnorr_fun for key generation
-// but use secp256k1 for everything else cryptography related
-// reason: secp256k1 has buggy key generation (doesn't compile)
 pub fn generate_key() -> (String, String) {
-    let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
-    let schnorr = Schnorr::<Sha256, _>::new(nonce_gen.clone());
-    let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-    let (privkey, pubkey) = keypair.as_tuple();
-    return (privkey.to_string(), pubkey.to_string());
+    let secp = Secp256k1::new();
+    let mut rng = OsRng::new().expect("OsRng");
+    let (privkey, _) = secp.generate_keypair(&mut rng);
+    let keypair = secp256k1::KeyPair::from_secret_key(&secp, privkey);
+    let pubkey = secp256k1::XOnlyPublicKey::from_keypair(&keypair);
+
+    return (privkey.display_secret().to_string(), pubkey.to_string());
 }
 
 pub fn generate_event(content: String) -> serde_json::Value {
