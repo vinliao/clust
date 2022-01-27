@@ -1,7 +1,8 @@
+// publishes signed event to relay 
+
 use url::Url;
 use tungstenite::{connect, Message};
-
-// publishes signed event to relay 
+use json::array;
 
 // struct Event {
 //     id: String,
@@ -31,9 +32,7 @@ pub fn publish(event: String) {
 
     // format: ["EVENT", event]
     // the second event is the json
-    // todo: use struct for this
     let payload = format!("[{}, {}]", "\"EVENT\"", event);
-
     println!("{}", payload);
 
     socket.write_message(Message::Text(payload.to_string())).unwrap();

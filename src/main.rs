@@ -1,6 +1,7 @@
 use clap::Parser;
 mod publisher;
 mod event;
+mod getter;
 
 #[derive(Parser)]
 struct Cli {
@@ -18,5 +19,7 @@ fn main() {
         // create signed event, then publish
         let event = event::create_event(args.content);
         publisher::publish(event);
+    } else if args.command == "get" {
+        getter::get_event();
     }
 }

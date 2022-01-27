@@ -1,7 +1,7 @@
 // get stuff from relay 
 
 use url::Url;
-use json::{object};
+use json::{object, array};
 use tungstenite::{connect, Message};
 
 pub fn get_event() {
@@ -25,8 +25,8 @@ pub fn get_event() {
         ids:["44f46af1331dd3f8a77b92b070d8c639387b2336f2ec9eac1d77f0ab7083b9b1"]
     };
 
-    // payload could be json::array (same with publish.rs)
-    let payload = format!("[{}, {}, {}]", "\"REQ\"", "\"p380vv138\"", filter);
+    let payload_raw = array!["REQ", "p380vv138", filter];
+    let payload = payload_raw.dump();
 
     println!("{}", payload);
 
