@@ -3,8 +3,9 @@ APIs:
 - [x] `clust post <content>`
 - [ ] `clust set-private <key>`
 - [ ] `clust generate-key`
-- [ ] `clust get`
 - [ ] `clust subscribe <id>`
+- [ ] `clust get <filter> --with-flags`
+- [ ] `clust home`
 
 Backend to-do:
 - [ ] use `serde` and struct instead of throwing strings around
