@@ -11,8 +11,12 @@ use rand::rngs::ThreadRng;
 use serde_json::json;
 use chrono::Local;
 
-pub fn generate_key() {
-    // todo
+pub fn generate_key() -> (String, String) {
+    let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
+    let schnorr = Schnorr::<Sha256, _>::new(nonce_gen.clone());
+    let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
+    let (privkey, pubkey) = keypair.as_tuple();
+    return (privkey.to_string(), pubkey.to_string());
 }
 
 pub fn generate_event(content: String) -> serde_json::Value {
@@ -29,7 +33,7 @@ pub fn generate_event(content: String) -> serde_json::Value {
     let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
     let schnorr = Schnorr::<Sha256, _>::new(nonce_gen.clone());
     let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
-    let (secret_key, public_key) = keypair.as_tuple();
+    let (_secret_key, public_key) = keypair.as_tuple();
 
     // create data
     // NIP-01 spec: [0, toHexString(publicKey), unixTime, 1, [], content];

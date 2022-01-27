@@ -20,5 +20,10 @@ fn main() {
         publisher::publish(event);
     } else if args.command == "get" {
         getter::get_event();
+    } else if args.command == "generate-key" {
+        let (privkey, pubkey) = generator::generate_key();
+        // todo: mnemonic
+        println!("Private key: {}", privkey);
+        println!("Public key: {}", pubkey);
     }
 }
