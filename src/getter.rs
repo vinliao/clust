@@ -1,7 +1,7 @@
 // get stuff from relay 
 
 use url::Url;
-use json::{object, array};
+use serde_json::json;
 use tungstenite::{connect, Message};
 
 pub fn get_event() {
@@ -21,13 +21,11 @@ pub fn get_event() {
     // format: ["GET", <id>, <filter>]
     // id is random string to represent the websocket connection
     // filter is the information to get (see nip-01)
-    let filter = object!{
-        ids:["44f46af1331dd3f8a77b92b070d8c639387b2336f2ec9eac1d77f0ab7083b9b1"]
-    };
+    let filter = json!({
+        "ids": ["44f46af1331dd3f8a77b92b070d8c639387b2336f2ec9eac1d77f0ab7083b9b1"]
+    });
 
-    let payload_raw = array!["REQ", "p380vv138", filter];
-    let payload = payload_raw.dump();
-
+    let payload = json!(["REQ", "p380vv138", filter]);
     println!("{}", payload);
 
     socket.write_message(Message::Text(payload.to_string())).unwrap();
