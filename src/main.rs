@@ -1,6 +1,5 @@
 use clap::Parser;
 mod publisher;
-mod event;
 mod generator;
 mod getter;
 
