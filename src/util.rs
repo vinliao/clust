@@ -11,6 +11,7 @@ use serde_json::json;
 use chrono::Local;
 use std::fs;
 use secp256k1::{Secp256k1, Message, SecretKey, PublicKey};
+use secp256k1::hashes::sha256;
 
 // use schnorr_fun for key generation
 // but use secp256k1 for everything else cryptography related
@@ -31,6 +32,7 @@ pub fn generate_event(content: String) -> serde_json::Value {
     let secp = Secp256k1::new();
     let privkey = SecretKey::from_slice(&privkey_byte_array[..]).expect("32 bytes, within curve order");
     let pubkey = PublicKey::from_secret_key(&secp, &privkey);
+    let keypair = secp256k1::KeyPair::from_secret_key(&secp, privkey);
 
     println!("{}", privkey.display_secret());
     println!("{}", pubkey);
@@ -41,22 +43,21 @@ pub fn generate_event(content: String) -> serde_json::Value {
     let unix_time = time.timestamp();
     let event_id = get_event_id(pubkey.to_string(), content.to_string(), unix_time);
 
-    // let event = json!({
-    //     "id": event_id_hex,
-    //     "pubkey": pubkey.to_string(),
-    //     "created_at": unix_time,
-    //     "kind": 1,
-    //     "tags": [],
-    //     "content": content.to_string(),
-    //     "sig": signature_hex
-    // });
+    // sign id
+    let message = Message::from_hashed_data::<sha256::Hash>("Hello World!".as_bytes());
+    let sig = secp.sign_schnorr(&message, &keypair);
 
     let event = json!({
+        "id": event_id,
         "pubkey": pubkey.to_string(),
         "created_at": unix_time,
         "kind": 1,
         "tags": [],
+        "content": content.to_string(),
+        "sig": sig.to_string()
     });
+
+    println!("{}", event);
 
     return event;
 }
@@ -79,6 +80,7 @@ pub fn generate_rc() {
     // {privkey: privkey_hex, relays: ["wss://something", "wss://something"]}
 }
 
+// todo: this still has quote when reading
 fn get_privkey() -> String {
     let data = fs::read_to_string("clust.json").expect("Unable to read file");
     let json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
