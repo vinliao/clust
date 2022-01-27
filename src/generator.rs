@@ -1,9 +1,4 @@
-// generate keys with secp256k1 module (crate)
-// output hex of private, public, mnemonic (maybe)
-//
-// idea: what if generate_event() is placed here
-// generator::generate_event()
-//
+// a bunch of generators
 
 use schnorr_fun::{
 fun::{marker::*, Scalar, nonce},
@@ -14,7 +9,6 @@ use hex;
 use sha2::{Sha256, Digest};
 use rand::rngs::ThreadRng;
 use serde_json::json;
-use json::{array, object};
 use chrono::Local;
 
 pub fn generate_key() {

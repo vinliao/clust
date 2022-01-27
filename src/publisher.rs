@@ -2,19 +2,9 @@
 
 use url::Url;
 use tungstenite::{connect, Message};
-use json::array;
+use serde_json::json;
 
-// struct Event {
-//     id: String,
-//     pubkey: String,
-//     created_at: u32,
-//     kind: u32,
-//     tags: [String; 0],
-//     content: String,
-//     sig: String
-// }
-
-pub fn publish(event: String) {
+pub fn publish(event: serde_json::Value) {
     // let url_string = "ws://localhost:8080";
     // let url_string = "wss://nostr-pub.wellorder.net";
     let url_string = "wss://relayer.fiatjaf.com";
@@ -32,7 +22,7 @@ pub fn publish(event: String) {
 
     // format: ["EVENT", event]
     // the second event is the json
-    let payload = format!("[{}, {}]", "\"EVENT\"", event);
+    let payload = json!(["EVENT", event]);
     println!("{}", payload);
 
     socket.write_message(Message::Text(payload.to_string())).unwrap();

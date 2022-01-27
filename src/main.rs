@@ -15,7 +15,7 @@ fn main() {
 
     if args.command == "publish" {
         // publish signed event
-        publisher::publish(args.content);
+        // publisher::publish(args.content);
     } else if args.command == "post" {
         let event = generator::generate_event(args.content);
         publisher::publish(event);
