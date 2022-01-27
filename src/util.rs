@@ -31,11 +31,11 @@ pub fn generate_event(content: String) -> serde_json::Value {
     let privkey_byte_array = hex::decode(privkey_hex).unwrap();
     let secp = Secp256k1::new();
     let privkey = SecretKey::from_slice(&privkey_byte_array[..]).expect("32 bytes, within curve order");
-    let pubkey = PublicKey::from_secret_key(&secp, &privkey);
     let keypair = secp256k1::KeyPair::from_secret_key(&secp, privkey);
+    let pubkey = secp256k1::XOnlyPublicKey::from_keypair(&keypair);
 
     println!("{}", privkey.display_secret());
-    println!("{}", pubkey);
+    println!("{}", pubkey.to_string());
 
     // create data
     // NIP-01 spec: [0, toHexString(publicKey), unixTime, 1, [], content];
