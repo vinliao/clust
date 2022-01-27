@@ -2,7 +2,7 @@
 APIs:
 - [x] `clust post <content>`
 - [ ] `clust set-private <key>`
-- [ ] `clust generate-key`
+- [x] `clust generate-key`
 - [ ] `clust subscribe <id>`
 - [ ] `clust get <filter> --with-flags`
 - [ ] `clust home`
