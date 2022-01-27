@@ -17,6 +17,6 @@ fn main() {
     } else if args.command == "post" {
         // create signed event, then publish
         let event = event::create_event(args.content);
-        // publisher::publish(event);
+        publisher::publish(event);
     }
 }

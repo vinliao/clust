@@ -27,8 +27,9 @@ pub fn create_event(content: String) -> String {
     // 4. get sig
     // 5. create struct, return it
     
-    
     // generate key
+    // todo: `clust set-private <key>`
+    // todo: use secp256k1 instead of schnorr_fun
     let nonce_gen = nonce::Synthetic::<Sha256, nonce::GlobalRng<ThreadRng>>::default();
     let schnorr = Schnorr::<Sha256, _>::new(nonce_gen.clone());
     let keypair = schnorr.new_keypair(Scalar::random(&mut rand::thread_rng()));
@@ -64,6 +65,5 @@ pub fn create_event(content: String) -> String {
         sig: signature_hex
     };
     
-    println!("{}", event.dump());
     return event.dump();
 }
