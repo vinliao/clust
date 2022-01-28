@@ -4,8 +4,9 @@ APIs:
 - [x] `clust set-private <key>`
 - [x] `clust generate-key`
 - [x] `clust init`
-- [ ] `clust subscribe <id>`
-- [ ] `clust get <filter> --with-flags`
+- [x] `clust get-event <id>`
+- [x] `clust get-profile <pubkey>`
+- [ ] `clust subscribe-to <pubkey>`
 - [ ] `clust home`
 
 Backend to-do:

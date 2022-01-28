@@ -18,13 +18,11 @@ fn main() {
 
     if args.command == "post" {
         if args.subcommand == "" {
-           println!("Cannot post empty string!") 
+            println!("Cannot post empty string!")
         } else {
             let event = util::generate_event(args.subcommand);
             publisher::publish(event);
         }
-    } else if args.command == "get" {
-        getter::get_event();
     } else if args.command == "generate-key" {
         let (privkey, pubkey) = util::generate_key();
         // todo: mnemonic
@@ -32,6 +30,10 @@ fn main() {
         println!("Public key: {}", pubkey);
     } else if args.command == "set-private" {
         util::set_privkey(args.subcommand);
+    } else if args.command == "get-event" {
+        getter::get_event(args.subcommand);
+    } else if args.command == "get-profile" {
+        getter::get_profile(args.subcommand);
     } else if args.command == "init" {
         util::generate_config();
     }

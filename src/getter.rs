@@ -4,8 +4,9 @@ use serde_json::json;
 use tungstenite::{connect, Message};
 use url::Url;
 
-pub fn get_event() {
+fn get(payload: String) {
     let url_string = "wss://relayer.fiatjaf.com";
+    // let url_string = "wss://nostr-pub.wellorder.net";
     let url = Url::parse(url_string).unwrap();
 
     let (mut socket, response) = connect(url).expect("Can't connect");
@@ -18,18 +19,8 @@ pub fn get_event() {
         println!("* {}", header);
     }
 
-    // format: ["GET", <id>, <filter>]
-    // id is random string to represent the websocket connection
-    // filter is the information to get (see nip-01)
-    let filter = json!({
-        "ids": ["44f46af1331dd3f8a77b92b070d8c639387b2336f2ec9eac1d77f0ab7083b9b1"]
-    });
-
-    let payload = json!(["REQ", "p380vv138", filter]);
-    println!("{}", payload);
-
     socket
-        .write_message(Message::Text(payload.to_string()))
+        .write_message(Message::Text(payload))
         .unwrap();
 
     loop {
@@ -38,4 +29,31 @@ pub fn get_event() {
     }
 
     // socket.close(None);
+
+}
+
+// request format: ["REQ", <id>, <filter>]
+// id is random string to represent the websocket connection
+// filter is the information to get (see nip-01)
+
+pub fn get_event(id: String) {
+    let filter = json!({
+        "ids": [id],
+    });
+
+    let payload = json!(["REQ", "p380vv138", filter]);
+    println!("{}", payload);
+
+    get(payload.to_string());
+}
+
+pub fn get_profile(pubkey: String) {
+    let filter = json!({
+        "authors": [pubkey],
+    });
+
+    let payload = json!(["REQ", "p380vv138", filter]);
+    println!("{}", payload);
+
+    get(payload.to_string());
 }
