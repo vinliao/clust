@@ -11,7 +11,7 @@ APIs:
 - [ ] `clust home`
 
 Backend to-do:
-- [ ] use `serde` and struct instead of throwing strings around
+- [ ] use `serde` and struct instead of throwing json around
 - [x] use config file to store keys and subscriptions
 - [x] replace `schnorr_fun` with `secp256k1`
 
