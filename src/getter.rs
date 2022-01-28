@@ -19,9 +19,7 @@ fn get(payload: String) {
         println!("* {}", header);
     }
 
-    socket
-        .write_message(Message::Text(payload))
-        .unwrap();
+    socket.write_message(Message::Text(payload)).unwrap();
 
     loop {
         let msg = socket.read_message().expect("Error reading message");
@@ -29,7 +27,6 @@ fn get(payload: String) {
     }
 
     // socket.close(None);
-
 }
 
 // request format: ["REQ", <id>, <filter>]
