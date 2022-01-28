@@ -39,6 +39,8 @@ pub fn generate_event(content: String) -> serde_json::Value {
     let message = Message::from_slice(&event_id_byte[..]).expect("32 bytes, within curve order");
     let sig = secp.sign_schnorr(&message, &keypair);
 
+    // for more information about the data below:
+    // https://github.com/fiatjaf/nostr/blob/master/nips/01.md
     let event = json!({
         "id": event_id,
         "pubkey": pubkey.to_string(),
@@ -66,6 +68,7 @@ fn get_event_id(pubkey: String, content: String, unix_time: i64) -> String {
     return event_id_hex;
 }
 
+// todo: these fs stuff needs to be refactored
 fn get_privkey() -> String {
     let data = fs::read_to_string("clust.json").expect("Unable to read config file");
     let json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
@@ -97,12 +100,61 @@ pub fn set_privkey(privkey: String) {
 pub fn generate_config() {
     let res = fs::read_to_string("clust.json");
 
-    // if file doesn't exist
     if res.is_err() {
-        // generate private
+        // if file doesn't exist
         let (privkey, _) = generate_key();
-        set_privkey(privkey);
+        let json_data = json!({
+            "privkey": privkey,
+            "subscription": [],
+            "relay": []
+        });
+
+        fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
     } else {
-        println!("Config file exists! Not doing anything");
+        println!("Config file exists!");
+    }
+}
+
+pub fn subscribe_to(pubkey: String) {
+    let res = fs::read_to_string("clust.json");
+
+    if res.is_ok() {
+        // if config file exist
+        let data = res.unwrap();
+        let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
+        json_data["subscription"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::Value::String(pubkey));
+        fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
+
+        println!("Subscribed!")
+    } else {
+        // if config file doesn't exist
+        println!("Can't find config file!")
+    }
+}
+
+pub fn unsubscribe_from(pubkey: String) {
+    let res = fs::read_to_string("clust.json");
+
+    if res.is_ok() {
+        // if config file exist
+        let data = res.unwrap();
+        let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
+        // let subscription_array = json_data["subscription"].as_array().unwrap();
+        // // let unsubscribe_index = json_data["subscription"]
+        // //     .as_array_mut()
+        // //     .unwrap()
+        // //     .binary_search(pubkey);
+        // let unsubscribe_index = subscription_array.binary_search(&serde_json::Value::String(pubkey));
+        // json_data.remove(unsubscribe_index);
+
+        // fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
+
+        // println!("Subscribed!")
+    } else {
+        // if config file doesn't exist
+        println!("Can't find config file!")
     }
 }

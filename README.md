@@ -7,6 +7,7 @@ APIs:
 - [x] `clust get-event <id>`
 - [x] `clust get-profile <pubkey>`
 - [ ] `clust subscribe-to <pubkey>`
+- [ ] `clust unsubscribe-from <pubkey>`
 - [ ] `clust home`
 
 Backend to-do:

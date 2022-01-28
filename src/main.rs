@@ -34,6 +34,8 @@ fn main() {
         getter::get_event(args.subcommand);
     } else if args.command == "get-profile" {
         getter::get_profile(args.subcommand);
+    } else if args.command == "subscribe-to" {
+        util::subscribe_to(args.subcommand);
     } else if args.command == "init" {
         util::generate_config();
     }
