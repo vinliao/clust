@@ -15,7 +15,9 @@ APIs:
 Backend to-do:
 - [ ] use `serde` and struct instead of throwing json around
 - [x] use config file to store keys and subscriptions
+- [ ] store config file in `~/.config/clust/config.json`
 - [x] replace `schnorr_fun` with `secp256k1`
+- [ ] pick relay from config file
 
 Questions (please DM if you know the answer):
 - What's the safest way to store private keys used in this CLI?
