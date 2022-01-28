@@ -8,8 +8,8 @@ APIs:
 - [x] `clust get-profile <pubkey>`
 - [x] `clust subscribe-to <pubkey>`
 - [x] `clust unsubscribe-from <pubkey>`
-- [ ] `clust add-relay <url>`
-- [ ] `clust remove-relay <url>`
+- [x] `clust add-relay <url>`
+- [x] `clust remove-relay <url>`
 - [ ] `clust home`
 
 Backend to-do:

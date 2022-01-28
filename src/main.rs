@@ -38,6 +38,10 @@ fn main() {
         util::subscribe_to(args.subcommand);
     } else if args.command == "unsubscribe-from" {
         util::unsubscribe_from(args.subcommand);
+    } else if args.command == "add-relay" {
+        util::add_relay(args.subcommand);
+    } else if args.command == "remove-relay" {
+        util::remove_relay(args.subcommand);
     } else if args.command == "init" {
         util::generate_config();
     }

@@ -155,3 +155,44 @@ pub fn unsubscribe_from(pubkey: String) {
         println!("Can't find config file!")
     }
 }
+
+pub fn add_relay(url: String) {
+    let res = fs::read_to_string("clust.json");
+
+    if res.is_ok() {
+        // if config file exist
+        let data = res.unwrap();
+        let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
+        json_data["relay"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::Value::String(url));
+        fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
+
+        println!("Relay added");
+    } else {
+        // if config file doesn't exist
+        println!("Can't find config file!")
+    }
+}
+
+pub fn remove_relay(url: String) {
+    let res = fs::read_to_string("clust.json");
+
+    if res.is_ok() {
+        // if config file exist
+        let data = res.unwrap();
+        let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
+        json_data["relay"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|value| *value != url);
+
+        fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
+
+        println!("Relay removed");
+    } else {
+        // if config file doesn't exist
+        println!("Can't find config file!")
+    }
+}
