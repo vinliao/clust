@@ -66,7 +66,6 @@ fn get_event_id(pubkey: String, content: String, unix_time: i64) -> String {
     return event_id_hex;
 }
 
-// todo:
 fn get_privkey() -> String {
     let data = fs::read_to_string("clust.json").expect("Unable to read config file");
     let json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
@@ -103,5 +102,7 @@ pub fn generate_config() {
         // generate private
         let (privkey, _) = generate_key();
         set_privkey(privkey);
+    } else {
+        println!("Config file exists! Not doing anything");
     }
 }
