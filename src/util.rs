@@ -1,12 +1,12 @@
-// a bunch of util functions 
+// a bunch of util functions
 
-use hex;
-use sha2::{Sha256, Digest};
-use serde_json::json;
 use chrono::Local;
-use std::fs;
-use secp256k1::{Secp256k1, Message, SecretKey};
+use hex;
 use secp256k1::rand::rngs::OsRng;
+use secp256k1::{Message, Secp256k1, SecretKey};
+use serde_json::json;
+use sha2::{Digest, Sha256};
+use std::fs;
 
 pub fn generate_key() -> (String, String) {
     let secp = Secp256k1::new();
@@ -20,12 +20,11 @@ pub fn generate_key() -> (String, String) {
 
 pub fn generate_event(content: String) -> serde_json::Value {
     // get usable privkey from privkey hexstring
-    // todo: use config file
-    // idea: maybe private key as param
-    let privkey_hex = get_privkey(); 
+    let privkey_hex = get_privkey();
     let privkey_byte_array = hex::decode(privkey_hex).unwrap();
     let secp = Secp256k1::new();
-    let privkey = SecretKey::from_slice(&privkey_byte_array[..]).expect("32 bytes, within curve order");
+    let privkey =
+        SecretKey::from_slice(&privkey_byte_array[..]).expect("32 bytes, within curve order");
     let keypair = secp256k1::KeyPair::from_secret_key(&secp, privkey);
     let pubkey = secp256k1::XOnlyPublicKey::from_keypair(&keypair);
 
@@ -61,13 +60,13 @@ fn get_event_id(pubkey: String, content: String, unix_time: i64) -> String {
     // hash data
     let mut hasher = Sha256::new();
     hasher.update(data.to_string());
-    let event_id = hasher.finalize();    
+    let event_id = hasher.finalize();
     let event_id_hex = hex::encode(event_id);
 
     return event_id_hex;
 }
 
-// todo: 
+// todo:
 fn get_privkey() -> String {
     let data = fs::read_to_string("clust.json").expect("Unable to read config file");
     let json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
@@ -78,7 +77,6 @@ fn get_privkey() -> String {
 }
 
 pub fn set_privkey(privkey: String) {
-
     let res = fs::read_to_string("clust.json");
 
     if res.is_ok() {
@@ -88,10 +86,9 @@ pub fn set_privkey(privkey: String) {
 
         json_data["privkey"] = serde_json::Value::String(privkey);
         fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
-
     } else {
         // if config file doesn't exist
-        let json_data = json!({"privkey": privkey});
+        let json_data = json!({ "privkey": privkey });
         fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
     }
 
@@ -107,12 +104,4 @@ pub fn generate_config() {
         let (privkey, _) = generate_key();
         set_privkey(privkey);
     }
-}
-
-pub fn add_relay() {
-    // add a relay to .clustrc
-}
-
-pub fn remove_relay() {
-    // remove a relay to .clustrc
 }
