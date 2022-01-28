@@ -10,7 +10,7 @@ APIs:
 - [x] `clust unsubscribe-from <pubkey>`
 - [x] `clust add-relay <url>`
 - [x] `clust remove-relay <url>`
-- [ ] `clust home`
+- [x] `clust home`
 
 Backend to-do:
 - [ ] use `serde` and struct instead of throwing json around

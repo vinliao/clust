@@ -1,6 +1,7 @@
 // get stuff from relay
 
 use serde_json::json;
+use std::fs;
 use tungstenite::{connect, Message};
 use url::Url;
 
@@ -53,4 +54,27 @@ pub fn get_profile(pubkey: String) {
     println!("{}", payload);
 
     get(payload.to_string());
+}
+
+pub fn get_event_from_subscription() {
+    let res = fs::read_to_string("clust.json");
+
+    if res.is_ok() {
+        // if config file exist
+        let data = res.unwrap();
+        let json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
+        let subscription = &json_data["subscription"];
+
+        let filter = json!({
+            "authors": subscription,
+        });
+
+        let payload = json!(["REQ", "p380vv138", filter]);
+        println!("{}", payload);
+
+        get(payload.to_string());
+    } else {
+        // if config file doesn't exist
+        println!("Can't find config file!")
+    }
 }

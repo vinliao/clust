@@ -44,5 +44,7 @@ fn main() {
         util::remove_relay(args.subcommand);
     } else if args.command == "init" {
         util::generate_config();
+    } else if args.command == "home" {
+        getter::get_event_from_subscription();
     }
 }
