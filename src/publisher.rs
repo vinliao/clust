@@ -1,8 +1,8 @@
-// publishes signed event to relay 
+// publishes signed event to relay
 
-use url::Url;
-use tungstenite::{connect, Message};
 use serde_json::json;
+use tungstenite::{connect, Message};
+use url::Url;
 
 pub fn publish(event: serde_json::Value) {
     // let url_string = "ws://localhost:8080";
@@ -25,7 +25,9 @@ pub fn publish(event: serde_json::Value) {
     let payload = json!(["EVENT", event]);
     println!("{}", payload);
 
-    socket.write_message(Message::Text(payload.to_string())).unwrap();
+    socket
+        .write_message(Message::Text(payload.to_string()))
+        .unwrap();
 
     loop {
         let msg = socket.read_message().expect("Error reading message");

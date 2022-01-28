@@ -1,8 +1,8 @@
-// get stuff from relay 
+// get stuff from relay
 
-use url::Url;
 use serde_json::json;
 use tungstenite::{connect, Message};
+use url::Url;
 
 pub fn get_event() {
     let url_string = "wss://relayer.fiatjaf.com";
@@ -28,7 +28,9 @@ pub fn get_event() {
     let payload = json!(["REQ", "p380vv138", filter]);
     println!("{}", payload);
 
-    socket.write_message(Message::Text(payload.to_string())).unwrap();
+    socket
+        .write_message(Message::Text(payload.to_string()))
+        .unwrap();
 
     loop {
         let msg = socket.read_message().expect("Error reading message");

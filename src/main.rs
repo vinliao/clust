@@ -1,13 +1,13 @@
 use clap::Parser;
-mod publisher;
 mod getter;
+mod publisher;
 mod util;
 
 // how to make subcommand optional? turn it into a flag?
 #[derive(Parser)]
 struct Cli {
     command: String,
-    subcommand: String
+    subcommand: String,
 }
 
 fn main() {
@@ -27,5 +27,5 @@ fn main() {
         util::set_privkey(args.subcommand);
     } else if args.command == "init" {
         util::generate_config();
-    } 
+    }
 }
