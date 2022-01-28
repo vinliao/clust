@@ -1,4 +1,4 @@
-// a bunch of generators
+// a bunch of util functions 
 
 use hex;
 use sha2::{Sha256, Digest};
@@ -22,15 +22,12 @@ pub fn generate_event(content: String) -> serde_json::Value {
     // get usable privkey from privkey hexstring
     // todo: use config file
     // idea: maybe private key as param
-    let privkey_hex = "38d23a761454f281a70de8de2607469206c9945bd335f56d9eb8458f5462c7c1";
+    let privkey_hex = get_privkey(); 
     let privkey_byte_array = hex::decode(privkey_hex).unwrap();
     let secp = Secp256k1::new();
     let privkey = SecretKey::from_slice(&privkey_byte_array[..]).expect("32 bytes, within curve order");
     let keypair = secp256k1::KeyPair::from_secret_key(&secp, privkey);
     let pubkey = secp256k1::XOnlyPublicKey::from_keypair(&keypair);
-
-    println!("{}", privkey.display_secret());
-    println!("{}", pubkey.to_string());
 
     // create data
     // NIP-01 spec: [0, toHexString(publicKey), unixTime, 1, [], content];
@@ -71,26 +68,45 @@ fn get_event_id(pubkey: String, content: String, unix_time: i64) -> String {
 }
 
 // todo: 
-pub fn generate_rc() {
-    // generate .clustrc, which has this pattern:
-    // {privkey: privkey_hex, relays: ["wss://something", "wss://something"]}
-}
-
-// todo: this still has quote when reading
 fn get_privkey() -> String {
-    let data = fs::read_to_string("clust.json").expect("Unable to read file");
+    let data = fs::read_to_string("clust.json").expect("Unable to read config file");
     let json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
+    let privkey_hex = json_data["privkey"].to_string();
 
-    return json_data["privkey"].to_string();
+    // not sure why there's quote here...
+    return privkey_hex.replace("\"", "");
 }
 
 pub fn set_privkey(privkey: String) {
-    let data = fs::read_to_string("clust.json").expect("Unable to read file");
-    let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
 
-    json_data["privkey"] = serde_json::Value::String(privkey);
-    fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
+    let res = fs::read_to_string("clust.json");
+
+    if res.is_ok() {
+        // if config file exist
+        let data = res.unwrap();
+        let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
+
+        json_data["privkey"] = serde_json::Value::String(privkey);
+        fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
+
+    } else {
+        // if config file doesn't exist
+        let json_data = json!({"privkey": privkey});
+        fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
+    }
+
     println!("Private key updated");
+}
+
+pub fn generate_config() {
+    let res = fs::read_to_string("clust.json");
+
+    // if file doesn't exist
+    if res.is_err() {
+        // generate private
+        let (privkey, _) = generate_key();
+        set_privkey(privkey);
+    }
 }
 
 pub fn add_relay() {
