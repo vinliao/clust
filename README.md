@@ -6,8 +6,10 @@ APIs:
 - [x] `clust init`
 - [x] `clust get-event <id>`
 - [x] `clust get-profile <pubkey>`
-- [ ] `clust subscribe-to <pubkey>`
-- [ ] `clust unsubscribe-from <pubkey>`
+- [x] `clust subscribe-to <pubkey>`
+- [x] `clust unsubscribe-from <pubkey>`
+- [ ] `clust add-relay <url>`
+- [ ] `clust remove-relay <url>`
 - [ ] `clust home`
 
 Backend to-do:

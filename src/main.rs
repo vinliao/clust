@@ -36,6 +36,8 @@ fn main() {
         getter::get_profile(args.subcommand);
     } else if args.command == "subscribe-to" {
         util::subscribe_to(args.subcommand);
+    } else if args.command == "unsubscribe-from" {
+        util::unsubscribe_from(args.subcommand);
     } else if args.command == "init" {
         util::generate_config();
     }

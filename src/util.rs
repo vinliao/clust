@@ -128,7 +128,7 @@ pub fn subscribe_to(pubkey: String) {
             .push(serde_json::Value::String(pubkey));
         fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
 
-        println!("Subscribed!")
+        println!("Subscribed");
     } else {
         // if config file doesn't exist
         println!("Can't find config file!")
@@ -142,17 +142,14 @@ pub fn unsubscribe_from(pubkey: String) {
         // if config file exist
         let data = res.unwrap();
         let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
-        // let subscription_array = json_data["subscription"].as_array().unwrap();
-        // // let unsubscribe_index = json_data["subscription"]
-        // //     .as_array_mut()
-        // //     .unwrap()
-        // //     .binary_search(pubkey);
-        // let unsubscribe_index = subscription_array.binary_search(&serde_json::Value::String(pubkey));
-        // json_data.remove(unsubscribe_index);
+        json_data["subscription"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|value| *value != pubkey);
 
-        // fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
+        fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
 
-        // println!("Subscribed!")
+        println!("Unsubscribed");
     } else {
         // if config file doesn't exist
         println!("Can't find config file!")
