@@ -46,5 +46,7 @@ fn main() {
         util::generate_config();
     } else if args.command == "home" {
         getter::get_event_from_subscription();
+    } else if args.command == "publish" {
+        publisher::publish_raw(args.subcommand);
     }
 }
