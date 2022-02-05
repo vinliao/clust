@@ -17,10 +17,10 @@ fn main() {
     let args = Cli::parse();
 
     if args.command == "generate-key" {
-        let (privkey, pubkey) = util::generate_key();
+        let (privkey_hex, pubkey_hex) = util::generate_key();
         // todo: mnemonic
-        println!("Private key: {}", privkey);
-        println!("Public key: {}", pubkey);
+        println!("Private key: {}", privkey_hex);
+        println!("Public key: {}", pubkey_hex);
     } else if args.command == "set-private" {
         util::set_privkey(args.subcommand);
     } else if args.command == "init" {

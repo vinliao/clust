@@ -11,6 +11,7 @@ use secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::fs;
+use rand::Rng;
 
 pub fn generate_key() -> (String, String) {
     let secp = Secp256k1::new();
@@ -23,12 +24,6 @@ pub fn generate_key() -> (String, String) {
 }
 
 pub fn create_message(content: String, recipient_pub_hex: String) -> serde_json::Value {
-    // for testing only
-    // recipient_pub should be a param
-    // let sender_priv = "d5f9b88ae04e7adb2fc075515e39df546df56d88ccdb304a9a779af1563d79ba";
-    // let sender_pub = "ab1a33b0cf3d8f8896c433e6996744e48f1401e6fbc94aea6f84291074fb1b75";
-    // let recipient_priv = "c10d9871f37f5d7dae09e93f2a381593b57697e02e15b446fbc99531b4623555";
-    // let recipient_pub = "7002538efd7175b2b5fafe4ee5a933242081c067a48ff019deca56eb13ef2186";
 
     let secp = Secp256k1::new();
     let sender_priv = get_privkey();
@@ -48,13 +43,9 @@ pub fn create_message(content: String, recipient_pub_hex: String) -> serde_json:
     // encrypt content
     type Aes256Cbc = Cbc<Aes256, Pkcs7>;
 
-    // todo: random bytes
+    // random bytes
     let mut iv_bytes = [0u8; 16];
-    hex::decode_to_slice(
-        "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
-        &mut iv_bytes as &mut [u8],
-    )
-    .unwrap();
+    rand::thread_rng().fill(&mut iv_bytes);
 
     let plaintext_json = json!({ sender_pub.to_string(): content });
     let plaintext = plaintext_json.to_string();

@@ -175,6 +175,7 @@ dependencies = [
  "chrono",
  "clap",
  "hex",
+ "rand 0.8.4",
  "secp256k1",
  "serde_json",
  "sha2",
