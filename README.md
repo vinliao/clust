@@ -1,5 +1,16 @@
 # Nostr CLI client built with Rust
 APIs:
+- [x] `clust init`
+- [x] `clust generate-key`
+- [x] `clust set-private <key>`
+- [x] `clust publish-raw <event>`
+- [ ] `clust message-init <pubkey>`
+- [ ] `clust message-get <pubkey>`
+- [ ] `clust message-send <pubkey> <message>`
+- [x] `clust add-relay <url>`
+- [x] `clust remove-relay <url>`
+
+Old APIs:
 - [x] `clust post <content>`
 - [x] `clust set-private <key>`
 - [x] `clust generate-key`

@@ -39,18 +39,18 @@ pub fn get_event(id: String) {
         "ids": [id],
     });
 
-    let payload = json!(["REQ", "p380vv138", filter]);
+    let payload = json!(["REQ", "foobar", filter]);
     println!("{}", payload);
 
     get(payload.to_string());
 }
 
-pub fn get_profile(pubkey: String) {
+pub fn get_message(shared_pubkey: String) {
     let filter = json!({
-        "authors": [pubkey],
+        "authors": [shared_pubkey],
     });
 
-    let payload = json!(["REQ", "p380vv138", filter]);
+    let payload = json!(["REQ", "foobar", filter]);
     println!("{}", payload);
 
     get(payload.to_string());
@@ -69,7 +69,7 @@ pub fn get_event_from_subscription() {
             "authors": subscription,
         });
 
-        let payload = json!(["REQ", "p380vv138", filter]);
+        let payload = json!(["REQ", "foobar", filter]);
         println!("{}", payload);
 
         get(payload.to_string());
