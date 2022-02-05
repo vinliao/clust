@@ -1,16 +1,16 @@
 // a bunch of util functions
 
+use aes::Aes256;
+use base64;
+use block_modes::block_padding::Pkcs7;
+use block_modes::{BlockMode, Cbc};
 use chrono::Local;
 use hex;
-use base64;
 use secp256k1::rand::rngs::OsRng;
-use secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
+use secp256k1::{KeyPair, Message, PublicKey, Secp256k1, SecretKey};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::fs;
-use aes::Aes256;
-use block_modes::{BlockMode, Cbc};
-use block_modes::block_padding::Pkcs7;
 
 pub fn generate_key() -> (String, String) {
     let secp = Secp256k1::new();
@@ -23,10 +23,6 @@ pub fn generate_key() -> (String, String) {
 }
 
 pub fn create_message(content: String) -> serde_json::Value {
-    // 1. get shared keypair
-    // 2. use it as event's pubkey, use it to sign,
-    // 3. encrypt with aes
-
     // for testing only
     let sender_priv = "d5f9b88ae04e7adb2fc075515e39df546df56d88ccdb304a9a779af1563d79ba";
     let sender_pub = "ab1a33b0cf3d8f8896c433e6996744e48f1401e6fbc94aea6f84291074fb1b75";
@@ -35,30 +31,8 @@ pub fn create_message(content: String) -> serde_json::Value {
 
     let secp = Secp256k1::new();
 
-    // get usable privkey from privkey hexstring
-    // let privkey_hex = get_privkey();
-    let privkey_hex = recipient_priv;
-    let privkey_byte_array = hex::decode(privkey_hex).unwrap();
-    let privkey =
-        SecretKey::from_slice(&privkey_byte_array[..]).expect("32 bytes, within curve order");
-    let keypair = secp256k1::KeyPair::from_secret_key(&secp, privkey);
-    let pubkey = secp256k1::XOnlyPublicKey::from_keypair(&keypair);
-
-    // not precisely sure why there needs to be 0x03 or 0x02 in front
-    let dummy_pubkey_hex = format!("03{}", sender_pub);
-    let dummy_pubkey_byte_array = hex::decode(dummy_pubkey_hex).unwrap();
-    let dummy_pubkey =
-        PublicKey::from_slice(&dummy_pubkey_byte_array[..]).expect("32 bytes, within curve order");
-
-    // turn this shared secret into a privkey, 
-    // which a schnorr pubkey can be derived from
-    let ecdh_byte_array = secp256k1::ecdh::SharedSecret::new(&dummy_pubkey, &privkey);
-    // let ecdh_hex = hex::encode(ecdh_byte_array); // can be used to debug
-    let ecdh_privkey =
-        SecretKey::from_slice(&ecdh_byte_array[..]).expect("32 bytes, within curve order");
-    let ecdh_keypair = secp256k1::KeyPair::from_secret_key(&secp, ecdh_privkey);
-    let ecdh_pub = secp256k1::XOnlyPublicKey::from_keypair(&ecdh_keypair);
-    
+    let (shared_keypair, shared_priv, shared_pub) =
+        get_shared_key(recipient_priv.to_string(), sender_pub.to_string());
     // todo: check whether broadcast event is present
 
     // create data
@@ -69,11 +43,19 @@ pub fn create_message(content: String) -> serde_json::Value {
     // encrypt content with aes and shared ecdh key
     type Aes256Cbc = Cbc<Aes256, Pkcs7>;
 
+    // todo: random bytes
     let mut iv_bytes = [0u8; 16];
-    hex::decode_to_slice("f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff", &mut iv_bytes as &mut [u8]).unwrap();
-    // let plaintext = content.as_bytes();
+    hex::decode_to_slice(
+        "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+        &mut iv_bytes as &mut [u8],
+    )
+    .unwrap();
+
+    // what if this plaintext is just json
+    // {pubkey: content} then encrypt
     let plaintext = content.as_bytes();
-    let cipher = Aes256Cbc::new_from_slices(&ecdh_privkey.serialize_secret()[..], &iv_bytes).unwrap();
+    let cipher =
+        Aes256Cbc::new_from_slices(&shared_priv.serialize_secret()[..], &iv_bytes).unwrap();
 
     // buffer must have enough space for message+padding
     let mut buffer = [0u8; 50];
@@ -81,33 +63,35 @@ pub fn create_message(content: String) -> serde_json::Value {
     let pos = plaintext.len();
     buffer[..pos].copy_from_slice(plaintext);
     let ciphertext = cipher.encrypt(&mut buffer, pos).unwrap();
-    let ciphertext_content = format!("{}?iv={}", base64::encode(ciphertext), base64::encode(iv_bytes));
-    
-    println!("ciphertext: {}", base64::encode(ciphertext));
-    println!("iv: {}", base64::encode(iv_bytes));
-    println!("content: {}", ciphertext_content);
+    let ciphertext_content = format!(
+        "{}?iv={}",
+        base64::encode(ciphertext),
+        base64::encode(iv_bytes)
+    );
 
     // decrypt
     // let cipher = Aes256Cbc::new_from_slices(&key, &iv).unwrap();
     // let mut buf = ciphertext.to_vec();
     // let decrypted_ciphertext = cipher.decrypt(&mut buf).unwrap();
-
     // assert_eq!(decrypted_ciphertext, plaintext);
 
-    // todo: sig error
-
-    let event_id = get_event_id(ecdh_pub.to_string(), ciphertext_content.to_string(), unix_time, 4);
+    let event_id = get_event_id(
+        shared_pub.to_string(),
+        ciphertext_content.to_string(),
+        unix_time,
+        4,
+    );
 
     // sign id
     let event_id_byte = hex::decode(event_id.clone()).unwrap();
     let message = Message::from_slice(&event_id_byte[..]).expect("32 bytes, within curve order");
-    let sig = secp.sign_schnorr(&message, &ecdh_keypair);
+    let sig = secp.sign_schnorr(&message, &shared_keypair);
 
     // for more information about the data below:
     // https://github.com/fiatjaf/nostr/blob/master/nips/01.md
     let event = json!({
         "id": event_id,
-        "pubkey": ecdh_pub.to_string(),
+        "pubkey": shared_pub.to_string(),
         "created_at": unix_time,
         "kind": 4,
         "tags": [],
@@ -118,6 +102,38 @@ pub fn create_message(content: String) -> serde_json::Value {
     println!("{}", event);
 
     return event;
+}
+
+fn get_shared_key(
+    sender_privkey: String,
+    recipient_pubkey: String,
+) -> (
+    secp256k1::KeyPair,
+    secp256k1::SecretKey,
+    secp256k1::XOnlyPublicKey,
+) {
+    let secp = Secp256k1::new();
+
+    let privkey_byte_array = hex::decode(sender_privkey).unwrap();
+    let privkey =
+        SecretKey::from_slice(&privkey_byte_array[..]).expect("32 bytes, within curve order");
+
+    // not precisely sure why there needs to be 0x03 or 0x02 in front
+    let pubkey_hex = format!("03{}", recipient_pubkey);
+    let pubkey_byte_array = hex::decode(pubkey_hex).unwrap();
+    let pubkey =
+        PublicKey::from_slice(&pubkey_byte_array[..]).expect("32 bytes, within curve order");
+
+    // turn this shared secret into a privkey,
+    // which a schnorr pubkey can be derived from
+    let shared_byte_array = secp256k1::ecdh::SharedSecret::new(&pubkey, &privkey);
+    // let shared_hex = hex::encode(shared_byte_array); // can be used to debug
+    let shared_privkey =
+        SecretKey::from_slice(&shared_byte_array[..]).expect("32 bytes, within curve order");
+    let shared_keypair = secp256k1::KeyPair::from_secret_key(&secp, shared_privkey);
+    let shared_pub = secp256k1::XOnlyPublicKey::from_keypair(&shared_keypair);
+
+    return (shared_keypair, shared_privkey, shared_pub);
 }
 
 fn get_event_id(pubkey: String, content: String, unix_time: i64, kind: u32) -> String {
