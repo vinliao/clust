@@ -4,29 +4,15 @@ APIs:
 - [x] `clust generate-key`
 - [x] `clust set-private <key>`
 - [x] `clust publish-raw <event>`
-- [ ] `clust message-broadcast <pubkey>`
-- [ ] `clust message-get <pubkey>`
+- [ ] `clust message-from <pubkey>`
 - [ ] `clust message-send <pubkey> <message>`
 - [x] `clust get-event <id>`
 
-Old APIs:
-- [x] `clust post <content>`
-- [x] `clust set-private <key>`
-- [x] `clust generate-key`
-- [x] `clust init`
-- [x] `clust get-event <id>`
-- [x] `clust get-profile <pubkey>`
-- [x] `clust subscribe-to <pubkey>`
-- [x] `clust unsubscribe-from <pubkey>`
-- [x] `clust add-relay <url>`
-- [x] `clust remove-relay <url>`
-- [x] `clust home`
-
 Backend to-do:
-- [ ] use `serde` and struct instead of throwing json around
-- [x] use config file to store keys and subscriptions
-- [ ] store config file in `~/.config/clust/config.json`
 - [x] replace `schnorr_fun` with `secp256k1`
+- [x] use config file to store keys and subscriptions
+- [ ] use `serde` and struct instead of throwing json around
+- [ ] store config file in `~/.config/clust/config.json`
 - [ ] pick relay from config file
 
 Questions (please DM if you know the answer):
