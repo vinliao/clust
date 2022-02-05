@@ -2,6 +2,7 @@
 
 use chrono::Local;
 use hex;
+use base64;
 use secp256k1::rand::rngs::OsRng;
 use secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
 use serde_json::json;
@@ -10,7 +11,6 @@ use std::fs;
 use aes::Aes256;
 use block_modes::{BlockMode, Cbc};
 use block_modes::block_padding::Pkcs7;
-// use hex_litera::hex;
 
 pub fn generate_key() -> (String, String) {
     let secp = Secp256k1::new();
@@ -69,24 +69,22 @@ pub fn create_message(content: String) -> serde_json::Value {
 
     let mut iv_bytes = [0u8; 16];
     hex::decode_to_slice("f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff", &mut iv_bytes as &mut [u8]).unwrap();
+    // let plaintext = content.as_bytes();
     let plaintext = b"supersecret!";
     let cipher = Aes256Cbc::new_from_slices(&ecdh_privkey.serialize_secret()[..], &iv_bytes).unwrap();
 
-    println!("{:?}", iv_bytes);
-    println!("{:?}", &ecdh_privkey.serialize_secret()[..]);
-
     // buffer must have enough space for message+padding
-    let mut buffer = [0u8; 16];
+    let mut buffer = [0u8; 50];
     // copy message to the buffer
     let pos = plaintext.len();
     buffer[..pos].copy_from_slice(plaintext);
     let ciphertext = cipher.encrypt(&mut buffer, pos).unwrap();
+    let ciphertext_content = format!("{}?iv={}", base64::encode(ciphertext), base64::encode(iv_bytes));
+    
+    println!("ciphertext: {}", base64::encode(ciphertext));
+    println!("iv: {}", base64::encode(iv_bytes));
+    println!("content: {}", ciphertext_content);
 
-    println!("ciphertext: {:?}", ciphertext);
-
-    // assert_eq!(ciphertext, hex!("1b7a4c403124ae2fb52bedc534d82fa8"));
-
-    // re-create cipher mode instance
     // decrypt
     // let cipher = Aes256Cbc::new_from_slices(&key, &iv).unwrap();
     // let mut buf = ciphertext.to_vec();
@@ -94,7 +92,9 @@ pub fn create_message(content: String) -> serde_json::Value {
 
     // assert_eq!(decrypted_ciphertext, plaintext);
 
-    let event_id = get_event_id(ecdh_pub.to_string(), "adsfasdfsadfasdf".to_string(), unix_time);
+    // todo: sig error
+
+    let event_id = get_event_id(ecdh_pub.to_string(), ciphertext_content.to_string(), unix_time, 4);
 
     // sign id
     let event_id_byte = hex::decode(event_id.clone()).unwrap();
@@ -105,11 +105,11 @@ pub fn create_message(content: String) -> serde_json::Value {
     // https://github.com/fiatjaf/nostr/blob/master/nips/01.md
     let event = json!({
         "id": event_id,
-        "pubkey": pubkey.to_string(),
+        "pubkey": ecdh_pub.to_string(),
         "created_at": unix_time,
-        "kind": 1,
+        "kind": 4,
         "tags": [],
-        "content": content.to_string(),
+        "content": ciphertext_content,
         "sig": sig.to_string()
     });
 
@@ -132,7 +132,7 @@ pub fn generate_event(content: String) -> serde_json::Value {
     // NIP-01 spec: [0, toHexString(publicKey), unixTime, 1, [], content];
     let time = Local::now();
     let unix_time = time.timestamp();
-    let event_id = get_event_id(pubkey.to_string(), content.to_string(), unix_time);
+    let event_id = get_event_id(pubkey.to_string(), content.to_string(), unix_time, 1);
 
     // sign id
     let event_id_byte = hex::decode(event_id.clone()).unwrap();
@@ -156,8 +156,8 @@ pub fn generate_event(content: String) -> serde_json::Value {
     return event;
 }
 
-fn get_event_id(pubkey: String, content: String, unix_time: i64) -> String {
-    let data = json!([0, pubkey, unix_time, 1, [], content]);
+fn get_event_id(pubkey: String, content: String, unix_time: i64, kind: u32) -> String {
+    let data = json!([0, pubkey, unix_time, kind, [], content]);
 
     // hash data
     let mut hasher = Sha256::new();

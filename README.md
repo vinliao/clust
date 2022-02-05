@@ -9,6 +9,7 @@ APIs:
 - [ ] `clust message-send <pubkey> <message>`
 - [x] `clust add-relay <url>`
 - [x] `clust remove-relay <url>`
+- [x] `clust get-event <id>`
 
 Old APIs:
 - [x] `clust post <content>`

@@ -31,6 +31,8 @@ fn main() {
         util::generate_config();
     } else if args.command == "publish-raw" {
         publisher::publish_raw(args.subcommand);
+    } else if args.command == "get-event" {
+        getter::get_event(args.subcommand);
     } else if args.command == "message-send" {
         // publisher::publish_raw(args.subcommand);
         let message = util::create_message(args.subcommand);
