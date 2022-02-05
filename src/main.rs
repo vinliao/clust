@@ -33,5 +33,10 @@ fn main() {
         let dummy_pubkey = "7002538efd7175b2b5fafe4ee5a933242081c067a48ff019deca56eb13ef2186";
         let message = util::create_message(args.subcommand, dummy_pubkey.to_string());
         // publisher::publish(message);
+    } else if args.command == "broadcast" {
+        // broadcast is really a bad name
+        // ideally not exposed to end user
+        let dummy_pubkey = "7002538efd7175b2b5fafe4ee5a933242081c067a48ff019deca56eb13ef2186";
+        util::send_encrypted_pubkey(dummy_pubkey.to_string())
     }
 }

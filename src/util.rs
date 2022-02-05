@@ -23,11 +23,59 @@ pub fn generate_key() -> (secp256k1::SecretKey, secp256k1::XOnlyPublicKey) {
     return (privkey, pubkey);
 }
 
+pub fn send_encrypted_pubkey(recipient_pub_hex: String) {
+    // encrypt sender's pubkey to recipient so both can have shared key
+    let secp = Secp256k1::new();
+
+    let (throwaway_privkey, throwaway_pubkey) = generate_key();
+    let throwaway_keypair = secp256k1::KeyPair::from_secret_key(&secp, throwaway_privkey);
+    let sender_pub = get_schnorr_pub(get_privkey());
+
+    let pubkey_hex = format!("03{}", recipient_pub_hex);
+    let pubkey_byte_array = hex::decode(pubkey_hex).unwrap();
+    let recipient_pub =
+        PublicKey::from_slice(&pubkey_byte_array[..]).expect("32 bytes, within curve order");
+    let (_, shared_priv, _) = get_shared_key(throwaway_privkey, recipient_pub);
+
+    // create data
+    // content is encrypted sender's pubkey
+    let time = Local::now();
+    let unix_time = time.timestamp();
+    let encrypted_pubkey = encrypt_ecdh(shared_priv, sender_pub.to_string());
+    // tag "#p" the recipeint pub (hex)
+    let event_id = get_event_id(
+        throwaway_pubkey.to_string(),
+        encrypted_pubkey.clone(),
+        unix_time,
+        4,
+        json!([["p", recipient_pub_hex]]),
+    );
+
+    // sign id
+    let event_id_byte = hex::decode(event_id.clone()).unwrap();
+    let message = Message::from_slice(&event_id_byte[..]).expect("32 bytes, within curve order");
+    // sign from throwaway keypair
+    let sig = secp.sign_schnorr(&message, &throwaway_keypair);
+
+    let event = json!({
+        "id": event_id,
+        "pubkey": throwaway_pubkey.to_string(),
+        "created_at": unix_time,
+        "kind": 4,
+        "tags": [["p", recipient_pub_hex]],
+        "content": encrypted_pubkey,
+        "sig": sig.to_string()
+    });
+
+    println!("{}", event);
+
+    // return event;
+}
+
 pub fn create_message(content: String, recipient_pub_hex: String) -> serde_json::Value {
     let secp = Secp256k1::new();
     let sender_priv = get_privkey();
-    let sender_keypair = secp256k1::KeyPair::from_secret_key(&secp, sender_priv);
-    let sender_pub = secp256k1::XOnlyPublicKey::from_keypair(&sender_keypair);
+    let sender_pub = get_schnorr_pub(sender_priv);
 
     // not precisely sure why there needs to be 0x03 or 0x02 in front
     let pubkey_hex = format!("03{}", recipient_pub_hex);
@@ -78,6 +126,7 @@ pub fn create_message(content: String, recipient_pub_hex: String) -> serde_json:
         ciphertext_string.to_string(),
         unix_time,
         4,
+        json!([]),
     );
 
     // sign id with shared key
@@ -122,8 +171,49 @@ fn get_shared_key(
     return (shared_keypair, shared_privkey, shared_pub);
 }
 
-fn get_event_id(pubkey: String, content: String, unix_time: i64, kind: u32) -> String {
-    let data = json!([0, pubkey, unix_time, kind, [], content]);
+fn get_schnorr_pub(privkey: secp256k1::SecretKey) -> secp256k1::XOnlyPublicKey {
+    let secp = Secp256k1::new();
+    let keypair = secp256k1::KeyPair::from_secret_key(&secp, privkey);
+    return secp256k1::XOnlyPublicKey::from_keypair(&keypair);
+}
+
+fn encrypt_ecdh(shared_priv: secp256k1::SecretKey, content: String) -> String {
+    // encrypt content
+    type Aes256Cbc = Cbc<Aes256, Pkcs7>;
+
+    // random bytes
+    let mut iv_bytes = [0u8; 16];
+    rand::thread_rng().fill(&mut iv_bytes);
+
+    let plaintext_json = content;
+    let plaintext = plaintext_json.to_string();
+    let plaintext_bytes = plaintext.as_bytes();
+
+    let cipher =
+        Aes256Cbc::new_from_slices(&shared_priv.serialize_secret()[..], &iv_bytes).unwrap();
+    // buffer must have enough space for message+padding
+    let mut buffer = [0u8; 5000];
+    // copy message to the buffer
+    let pos = plaintext_bytes.len();
+    buffer[..pos].copy_from_slice(plaintext_bytes);
+    let ciphertext = cipher.encrypt(&mut buffer, pos).unwrap();
+    let ciphertext_string = format!(
+        "{}?iv={}",
+        base64::encode(ciphertext),
+        base64::encode(iv_bytes)
+    );
+
+    return ciphertext_string;
+}
+
+fn get_event_id(
+    pubkey: String,
+    content: String,
+    unix_time: i64,
+    kind: u32,
+    tags: serde_json::Value,
+) -> String {
+    let data = json!([0, pubkey, unix_time, kind, tags, content]);
 
     // hash data
     let mut hasher = Sha256::new();
