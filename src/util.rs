@@ -6,25 +6,24 @@ use block_modes::block_padding::Pkcs7;
 use block_modes::{BlockMode, Cbc};
 use chrono::Local;
 use hex;
+use rand::Rng;
 use secp256k1::rand::rngs::OsRng;
 use secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::fs;
-use rand::Rng;
 
-pub fn generate_key() -> (String, String) {
+pub fn generate_key() -> (secp256k1::SecretKey, secp256k1::XOnlyPublicKey) {
     let secp = Secp256k1::new();
     let mut rng = OsRng::new().expect("OsRng");
     let (privkey, _) = secp.generate_keypair(&mut rng);
     let keypair = secp256k1::KeyPair::from_secret_key(&secp, privkey);
     let pubkey = secp256k1::XOnlyPublicKey::from_keypair(&keypair);
 
-    return (privkey.display_secret().to_string(), pubkey.to_string());
+    return (privkey, pubkey);
 }
 
 pub fn create_message(content: String, recipient_pub_hex: String) -> serde_json::Value {
-
     let secp = Secp256k1::new();
     let sender_priv = get_privkey();
     let sender_keypair = secp256k1::KeyPair::from_secret_key(&secp, sender_priv);
@@ -171,7 +170,7 @@ pub fn generate_config() {
         // if file doesn't exist
         let (privkey, _) = generate_key();
         let json_data = json!({
-            "privkey": privkey,
+            "privkey": privkey.display_secret().to_string(),
             "subscription": [],
             "relay": []
         });
