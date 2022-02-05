@@ -7,6 +7,10 @@ use secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::fs;
+use aes::Aes256;
+use block_modes::{BlockMode, Cbc};
+use block_modes::block_padding::Pkcs7;
+// use hex_litera::hex;
 
 pub fn generate_key() -> (String, String) {
     let secp = Secp256k1::new();
@@ -61,8 +65,36 @@ pub fn create_message(content: String) -> serde_json::Value {
     let unix_time = time.timestamp();
 
     // encrypt content with aes and shared ecdh key
+    type Aes256Cbc = Cbc<Aes256, Pkcs7>;
 
-    let event_id = get_event_id(ecdh_pub.to_string(), encrypted, unix_time);
+    let mut iv_bytes = [0u8; 16];
+    hex::decode_to_slice("f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff", &mut iv_bytes as &mut [u8]).unwrap();
+    let plaintext = b"supersecret!";
+    let cipher = Aes256Cbc::new_from_slices(&ecdh_privkey.serialize_secret()[..], &iv_bytes).unwrap();
+
+    println!("{:?}", iv_bytes);
+    println!("{:?}", &ecdh_privkey.serialize_secret()[..]);
+
+    // buffer must have enough space for message+padding
+    let mut buffer = [0u8; 16];
+    // copy message to the buffer
+    let pos = plaintext.len();
+    buffer[..pos].copy_from_slice(plaintext);
+    let ciphertext = cipher.encrypt(&mut buffer, pos).unwrap();
+
+    println!("ciphertext: {:?}", ciphertext);
+
+    // assert_eq!(ciphertext, hex!("1b7a4c403124ae2fb52bedc534d82fa8"));
+
+    // re-create cipher mode instance
+    // decrypt
+    // let cipher = Aes256Cbc::new_from_slices(&key, &iv).unwrap();
+    // let mut buf = ciphertext.to_vec();
+    // let decrypted_ciphertext = cipher.decrypt(&mut buf).unwrap();
+
+    // assert_eq!(decrypted_ciphertext, plaintext);
+
+    let event_id = get_event_id(ecdh_pub.to_string(), "adsfasdfsadfasdf".to_string(), unix_time);
 
     // sign id
     let event_id_byte = hex::decode(event_id.clone()).unwrap();
