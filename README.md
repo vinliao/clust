@@ -17,3 +17,4 @@ Backend to-do:
 - [ ] use `serde` and struct instead of throwing json around
 - [ ] store config file in `~/.config/clust/config.json`
 - [ ] pick relay from config file
+- [ ] only use strings to pretty-print, deal directly with bytes and structs
