@@ -4,11 +4,9 @@ APIs:
 - [x] `clust generate-key`
 - [x] `clust set-private <key>`
 - [x] `clust publish-raw <event>`
-- [ ] `clust message-init <pubkey>`
+- [ ] `clust message-broadcast <pubkey>`
 - [ ] `clust message-get <pubkey>`
 - [ ] `clust message-send <pubkey> <message>`
-- [x] `clust add-relay <url>`
-- [x] `clust remove-relay <url>`
 - [x] `clust get-event <id>`
 
 Old APIs:

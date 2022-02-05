@@ -37,7 +37,7 @@ pub fn create_message(content: String) -> serde_json::Value {
 
     // get usable privkey from privkey hexstring
     // let privkey_hex = get_privkey();
-    let privkey_hex = sender_priv;
+    let privkey_hex = recipient_priv;
     let privkey_byte_array = hex::decode(privkey_hex).unwrap();
     let privkey =
         SecretKey::from_slice(&privkey_byte_array[..]).expect("32 bytes, within curve order");
@@ -45,7 +45,7 @@ pub fn create_message(content: String) -> serde_json::Value {
     let pubkey = secp256k1::XOnlyPublicKey::from_keypair(&keypair);
 
     // not precisely sure why there needs to be 0x03 or 0x02 in front
-    let dummy_pubkey_hex = format!("03{}", recipient_pub);
+    let dummy_pubkey_hex = format!("03{}", sender_pub);
     let dummy_pubkey_byte_array = hex::decode(dummy_pubkey_hex).unwrap();
     let dummy_pubkey =
         PublicKey::from_slice(&dummy_pubkey_byte_array[..]).expect("32 bytes, within curve order");
@@ -58,6 +58,8 @@ pub fn create_message(content: String) -> serde_json::Value {
         SecretKey::from_slice(&ecdh_byte_array[..]).expect("32 bytes, within curve order");
     let ecdh_keypair = secp256k1::KeyPair::from_secret_key(&secp, ecdh_privkey);
     let ecdh_pub = secp256k1::XOnlyPublicKey::from_keypair(&ecdh_keypair);
+    
+    // todo: check whether broadcast event is present
 
     // create data
     // NIP-01 spec: [0, toHexString(publicKey), unixTime, 1, [], content];
@@ -70,7 +72,7 @@ pub fn create_message(content: String) -> serde_json::Value {
     let mut iv_bytes = [0u8; 16];
     hex::decode_to_slice("f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff", &mut iv_bytes as &mut [u8]).unwrap();
     // let plaintext = content.as_bytes();
-    let plaintext = b"supersecret!";
+    let plaintext = content.as_bytes();
     let cipher = Aes256Cbc::new_from_slices(&ecdh_privkey.serialize_secret()[..], &iv_bytes).unwrap();
 
     // buffer must have enough space for message+padding
@@ -110,44 +112,6 @@ pub fn create_message(content: String) -> serde_json::Value {
         "kind": 4,
         "tags": [],
         "content": ciphertext_content,
-        "sig": sig.to_string()
-    });
-
-    println!("{}", event);
-
-    return event;
-}
-
-pub fn generate_event(content: String) -> serde_json::Value {
-    // get usable privkey from privkey hexstring
-    let privkey_hex = get_privkey();
-    let privkey_byte_array = hex::decode(privkey_hex).unwrap();
-    let secp = Secp256k1::new();
-    let privkey =
-        SecretKey::from_slice(&privkey_byte_array[..]).expect("32 bytes, within curve order");
-    let keypair = secp256k1::KeyPair::from_secret_key(&secp, privkey);
-    let pubkey = secp256k1::XOnlyPublicKey::from_keypair(&keypair);
-
-    // create data
-    // NIP-01 spec: [0, toHexString(publicKey), unixTime, 1, [], content];
-    let time = Local::now();
-    let unix_time = time.timestamp();
-    let event_id = get_event_id(pubkey.to_string(), content.to_string(), unix_time, 1);
-
-    // sign id
-    let event_id_byte = hex::decode(event_id.clone()).unwrap();
-    let message = Message::from_slice(&event_id_byte[..]).expect("32 bytes, within curve order");
-    let sig = secp.sign_schnorr(&message, &keypair);
-
-    // for more information about the data below:
-    // https://github.com/fiatjaf/nostr/blob/master/nips/01.md
-    let event = json!({
-        "id": event_id,
-        "pubkey": pubkey.to_string(),
-        "created_at": unix_time,
-        "kind": 1,
-        "tags": [],
-        "content": content.to_string(),
         "sig": sig.to_string()
     });
 
@@ -212,88 +176,5 @@ pub fn generate_config() {
         fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
     } else {
         println!("Config file exists!");
-    }
-}
-
-// can be used in the context of private message
-pub fn subscribe_to(pubkey: String) {
-    let res = fs::read_to_string("clust.json");
-
-    if res.is_ok() {
-        // if config file exist
-        let data = res.unwrap();
-        let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
-        json_data["subscription"]
-            .as_array_mut()
-            .unwrap()
-            .push(serde_json::Value::String(pubkey));
-        fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
-
-        println!("Subscribed");
-    } else {
-        // if config file doesn't exist
-        println!("Can't find config file!")
-    }
-}
-
-pub fn unsubscribe_from(pubkey: String) {
-    let res = fs::read_to_string("clust.json");
-
-    if res.is_ok() {
-        // if config file exist
-        let data = res.unwrap();
-        let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
-        json_data["subscription"]
-            .as_array_mut()
-            .unwrap()
-            .retain(|value| *value != pubkey);
-
-        fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
-
-        println!("Unsubscribed");
-    } else {
-        // if config file doesn't exist
-        println!("Can't find config file!")
-    }
-}
-
-pub fn add_relay(url: String) {
-    let res = fs::read_to_string("clust.json");
-
-    if res.is_ok() {
-        // if config file exist
-        let data = res.unwrap();
-        let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
-        json_data["relay"]
-            .as_array_mut()
-            .unwrap()
-            .push(serde_json::Value::String(url));
-        fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
-
-        println!("Relay added");
-    } else {
-        // if config file doesn't exist
-        println!("Can't find config file!")
-    }
-}
-
-pub fn remove_relay(url: String) {
-    let res = fs::read_to_string("clust.json");
-
-    if res.is_ok() {
-        // if config file exist
-        let data = res.unwrap();
-        let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
-        json_data["relay"]
-            .as_array_mut()
-            .unwrap()
-            .retain(|value| *value != url);
-
-        fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
-
-        println!("Relay removed");
-    } else {
-        // if config file doesn't exist
-        println!("Can't find config file!")
     }
 }

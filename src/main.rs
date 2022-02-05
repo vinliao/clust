@@ -23,10 +23,6 @@ fn main() {
         println!("Public key: {}", pubkey);
     } else if args.command == "set-private" {
         util::set_privkey(args.subcommand);
-    } else if args.command == "add-relay" {
-        util::add_relay(args.subcommand);
-    } else if args.command == "remove-relay" {
-        util::remove_relay(args.subcommand);
     } else if args.command == "init" {
         util::generate_config();
     } else if args.command == "publish-raw" {
@@ -36,5 +32,6 @@ fn main() {
     } else if args.command == "message-send" {
         // publisher::publish_raw(args.subcommand);
         let message = util::create_message(args.subcommand);
+        publisher::publish(message);
     }
 }
