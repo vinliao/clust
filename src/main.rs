@@ -16,7 +16,7 @@ struct Cli {
 fn main() {
     let args = Cli::parse();
 
-    if args.command == "generate-key" {
+    if args.command == "generate-keypair" {
         let (privkey_hex, pubkey_hex) = util::generate_key();
         // todo: mnemonic
         println!("Private key: {}", privkey_hex);
