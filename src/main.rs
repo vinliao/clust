@@ -30,8 +30,8 @@ fn main() {
     } else if args.command == "get-event" {
         getter::get_event(args.subcommand);
     } else if args.command == "message-send" {
-        // publisher::publish_raw(args.subcommand);
-        let message = util::create_message(args.subcommand);
-        publisher::publish(message);
+        let dummy_pubkey = "7002538efd7175b2b5fafe4ee5a933242081c067a48ff019deca56eb13ef2186";
+        let message = util::create_message(args.subcommand, dummy_pubkey.to_string());
+        // publisher::publish(message);
     }
 }
