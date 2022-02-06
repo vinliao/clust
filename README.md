@@ -3,6 +3,7 @@ APIs:
 - [x] `clust init`
 - [x] `clust generate-keypair`
 - [x] `clust set-private <key>`
+- [ ] `clust add-contact <key>`
 - [ ] `clust message-from <pubkey>`
 - [ ] `clust message-send <pubkey> <message>`
 
