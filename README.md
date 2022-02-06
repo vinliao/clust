@@ -18,3 +18,4 @@ Backend to-do:
 - [ ] store config file in `~/.config/clust/config.json`
 - [ ] pick relay from config file
 - [ ] only use strings to pretty-print, deal directly with bytes and structs
+- [ ] write tests (duh)
