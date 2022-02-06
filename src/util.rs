@@ -11,7 +11,7 @@ use secp256k1::rand::rngs::OsRng;
 use secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
 use serde_json::json;
 use sha2::{Digest, Sha256};
-use std::fs;
+use std::{fs, str};
 
 pub fn generate_key() -> (secp256k1::SecretKey, secp256k1::XOnlyPublicKey) {
     let secp = Secp256k1::new();
@@ -101,6 +101,7 @@ pub fn create_message(content: String, recipient_pub_hex: String) -> serde_json:
     let cipher =
         Aes256Cbc::new_from_slices(&shared_priv.serialize_secret()[..], &iv_bytes).unwrap();
     // buffer must have enough space for message+padding
+    // todo: figure out what the ideal buffer size is
     let mut buffer = [0u8; 5000];
     // copy message to the buffer
     let pos = plaintext_bytes.len();
@@ -111,12 +112,6 @@ pub fn create_message(content: String, recipient_pub_hex: String) -> serde_json:
         base64::encode(ciphertext),
         base64::encode(iv_bytes)
     );
-
-    // decrypt
-    // let cipher = Aes256Cbc::new_from_slices(&key, &iv).unwrap();
-    // let mut buf = ciphertext.to_vec();
-    // let decrypted_ciphertext = cipher.decrypt(&mut buf).unwrap();
-    // assert_eq!(decrypted_ciphertext, plaintext);
 
     // create event id with encrypted data
     let time = Local::now();
@@ -171,6 +166,54 @@ fn get_shared_key(
     return (shared_keypair, shared_privkey, shared_pub);
 }
 
+pub fn pull_and_decrypt() {
+    // pull init messages, then decrypt the content (the sender's pubkey)
+    // how do i code and test this systematically?
+
+    let sender_priv = get_privkey();
+    let sender_pub = get_schnorr_pub(sender_priv);
+    // request to relay: ["REQ", "foobar", [{"#p": sender_pub}]]
+    // todo: replace this with pulls to real relay
+
+    println!("{}", sender_pub);
+    // is this dummy event's pub the same as pub above?
+    let dummy_event = json!({
+        "content":"TNFR/PLHSeJfzbj/lVP4vjfIWAaYDhOUnLvnza6kYn8P3bgpI6Tt/A7l1fGLxicYiRW+s5r1Azw9ggbSgVB4O/P97Uuti2KeOunn5px6KWg=?iv=W4H29vgjaOsE7WZzI7Irlg==",
+        "created_at":1644088300,
+        "id":"1c141a2603af0ce19d6bd8e75e9ded03eac94df0d67c010ca8e2e37aa6e0dc86",
+        "kind":4,
+        "pubkey":"0553362b7f036acf8cb5ce0db095c7d05cee0d52293cb9818131228d726b3295",
+        "sig":"9461f1328f5e3e72fe56a92f7535f37267eff6fa719ae9abe2821b02d72c204e48c4dbc3fb2bf712a3dc9524372cfe56f60fd5bf4689da907902f95f706405b1",
+        "tags":[["p","7b27c478232bbc9791d403b1db67e9696d87e7e6fff4e57a9cdfdedb754ad475"]]
+    });
+
+    let encrypted_content_base64 = "TNFR/PLHSeJfzbj/lVP4vjfIWAaYDhOUnLvnza6kYn8P3bgpI6Tt/A7l1fGLxicYiRW+s5r1Azw9ggbSgVB4O/P97Uuti2KeOunn5px6KWg";
+    let encrypted_vec = base64::decode(encrypted_content_base64).unwrap();
+    let iv_base64 = "W4H29vgjaOsE7WZzI7Irlg==";
+    let iv_vec = base64::decode(iv_base64).unwrap();
+    let dummy_pub = "0553362b7f036acf8cb5ce0db095c7d05cee0d52293cb9818131228d726b3295";
+    let dummy_pubkey_hex = format!("03{}", dummy_pub);
+    let dummy_pubkey_byte_array = hex::decode(dummy_pubkey_hex).unwrap();
+    let dummy_recipient_pub =
+        PublicKey::from_slice(&dummy_pubkey_byte_array[..]).expect("32 bytes, within curve order");
+    let (_, shared_priv, _) = get_shared_key(sender_priv, dummy_recipient_pub);
+
+    // let mut encrypted_bytes = [0u8; 5000];
+    // // copy message to the buffer
+    // let encrypted_vec_pos = encrypted_vec.len();
+    // encrypted_bytes[..encrypted_vec_pos].copy_from_slice(&encrypted_vec[..]);
+
+    let mut iv_bytes = [0u8; 16];
+    // copy message to the buffer
+    iv_bytes.copy_from_slice(&iv_vec[..]);
+
+    println!("{:?}", iv_bytes);
+    println!("{:?}", encrypted_vec);
+    let plaintext = decrypt_ecdh(shared_priv, iv_bytes, encrypted_vec);
+
+    println!("{}", plaintext);
+}
+
 fn get_schnorr_pub(privkey: secp256k1::SecretKey) -> secp256k1::XOnlyPublicKey {
     let secp = Secp256k1::new();
     let keypair = secp256k1::KeyPair::from_secret_key(&secp, privkey);
@@ -204,6 +247,22 @@ fn encrypt_ecdh(shared_priv: secp256k1::SecretKey, content: String) -> String {
     );
 
     return ciphertext_string;
+}
+
+fn decrypt_ecdh(
+    shared_priv: secp256k1::SecretKey,
+    iv_bytes: [u8; 16],
+    ciphertext: Vec<u8>,
+) -> String {
+    // decrypt content
+    type Aes256Cbc = Cbc<Aes256, Pkcs7>;
+
+    let cipher =
+        Aes256Cbc::new_from_slices(&shared_priv.serialize_secret()[..], &iv_bytes).unwrap();
+    let mut buf = ciphertext.to_vec();
+    let decrypted_ciphertext = cipher.decrypt(&mut buf).unwrap();
+
+    return str::from_utf8(decrypted_ciphertext).unwrap().to_string();
 }
 
 fn get_event_id(
