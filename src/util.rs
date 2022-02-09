@@ -70,7 +70,7 @@ pub fn create_dm_throwaway_key(recipient_pub_hex: String, message: String) -> se
     return event;
 }
 
-pub fn create_alias() -> serde_json::Value {
+pub fn create_alias() -> (serde_json::Value, secp256k1::SecretKey) {
     // create an array that consists of main event and alias event
 
     let secp = Secp256k1::new();
@@ -120,7 +120,7 @@ pub fn create_alias() -> serde_json::Value {
         "sig": alias_sig.to_string()
     });
 
-    return json!([main_event, alias_event]);
+    return (json!([main_event, alias_event]), alias_privkey);
 }
 
 fn get_shared_key(

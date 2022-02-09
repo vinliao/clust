@@ -37,7 +37,7 @@ fn main() {
     } else if args.command == "create-dm-throwaway-key" {
         util::create_dm_throwaway_key(args.subcommand, args.message);
     } else if args.command == "create-alias" {
-        let linkage_event = util::create_alias();
-        println!("{}", linkage_event.to_string());
+        let (linkage_events, _alias_privkey) = util::create_alias();
+        println!("{}", linkage_events.to_string());
     }
 }
