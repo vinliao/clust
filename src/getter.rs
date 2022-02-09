@@ -44,9 +44,10 @@ pub fn get_event(id: String) {
     get(payload.to_string());
 }
 
-pub fn get_profile(shared_pubkey: String) {
+pub fn get_dm(pubkey: String) {
     let filter = json!({
-        "authors": [shared_pubkey],
+        "kinds": [4],
+        "#p": [pubkey],
     });
 
     let payload = json!(["REQ", "foobar", filter]);

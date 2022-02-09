@@ -24,7 +24,8 @@ pub fn generate_key() -> (secp256k1::SecretKey, secp256k1::XOnlyPublicKey) {
 }
 
 pub fn create_dm_throwaway_key(recipient_pub_hex: String, message: String) -> serde_json::Value {
-    // encrypt sender's pubkey to recipient so both can have shared key
+    // create dm event to a pubkey with random key
+
     let secp = Secp256k1::new();
 
     let (throwaway_privkey, throwaway_pubkey) = generate_key();
@@ -37,11 +38,10 @@ pub fn create_dm_throwaway_key(recipient_pub_hex: String, message: String) -> se
     let (_, shared_priv, _) = get_shared_key(throwaway_privkey, recipient_pub);
 
     // create data
-    // content is encrypted sender's pubkey
     let time = Local::now();
     let unix_time = time.timestamp();
     let encrypted_message = encrypt_ecdh(shared_priv, message);
-    let event_id = get_event_id(
+    let event_id_hex = get_event_id(
         throwaway_pubkey.to_string(),
         encrypted_message.clone(),
         unix_time,
@@ -50,13 +50,13 @@ pub fn create_dm_throwaway_key(recipient_pub_hex: String, message: String) -> se
     );
 
     // sign id
-    let event_id_byte = hex::decode(event_id.clone()).unwrap();
+    let event_id_byte = hex::decode(event_id_hex.clone()).unwrap();
     let event_id_message = Message::from_slice(&event_id_byte[..]).expect("32 bytes, within curve order");
     // sign from throwaway keypair
     let sig = secp.sign_schnorr(&event_id_message, &throwaway_keypair);
 
     let event = json!({
-        "id": event_id,
+        "id": event_id_hex,
         "pubkey": throwaway_pubkey.to_string(),
         "created_at": unix_time,
         "kind": 4,
@@ -68,6 +68,59 @@ pub fn create_dm_throwaway_key(recipient_pub_hex: String, message: String) -> se
     println!("{}", event);
 
     return event;
+}
+
+pub fn create_alias() -> serde_json::Value {
+    // create an array that consists of main event and alias event
+
+    let secp = Secp256k1::new();
+    let main_privkey = get_privkey();
+    let main_pubkey = get_schnorr_pub(main_privkey);
+    let main_keypair = secp256k1::KeyPair::from_secret_key(&secp, main_privkey);
+
+    let (alias_privkey, alias_pubkey) = generate_key();
+    let alias_keypair = secp256k1::KeyPair::from_secret_key(&secp, alias_privkey);
+
+    let time = Local::now();
+    let unix_time = time.timestamp();
+
+    // todo: duplicate code, refactor
+    let main_tag = json!([["p", alias_pubkey.to_string()]]);
+    // todo: change "kind" to new kind defined in new NIP
+    let main_event_id_hex = get_event_id(main_pubkey.to_string(), "".to_string(), unix_time, 1, main_tag.clone());
+    let main_event_id_byte = hex::decode(main_event_id_hex.clone()).unwrap();
+    let main_event_id_message = Message::from_slice(&main_event_id_byte[..]).expect("32 bytes, within curve order");
+    let main_sig = secp.sign_schnorr(&main_event_id_message, &main_keypair);
+
+    // todo: change kind to new kind defined in new NIP
+    let main_event = json!({
+        "id": main_event_id_hex,
+        "pubkey": main_pubkey.to_string(),
+        "created_at": unix_time,
+        "kind": 1,
+        "tags": main_tag,
+        "content": "",
+        "sig": main_sig.to_string()
+    });
+
+    let alias_tag = json!([["p", main_pubkey.to_string()], ["e", main_event_id_hex]]);
+    // todo: change "kind" to new kind defined in new NIP
+    let alias_event_id_hex = get_event_id(alias_pubkey.to_string(), "".to_string(), unix_time, 1, alias_tag.clone());
+    let alias_event_id_byte = hex::decode(alias_event_id_hex.clone()).unwrap();
+    let alias_event_id_message = Message::from_slice(&alias_event_id_byte[..]).expect("32 bytes, within curve order");
+    let alias_sig = secp.sign_schnorr(&alias_event_id_message, &alias_keypair);
+
+    let alias_event = json!({
+        "id": alias_event_id_hex,
+        "pubkey": alias_pubkey.to_string(),
+        "created_at": unix_time,
+        "kind": 1,
+        "tags": alias_tag,
+        "content": "",
+        "sig": alias_sig.to_string()
+    });
+
+    return json!([main_event, alias_event]);
 }
 
 fn get_shared_key(

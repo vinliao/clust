@@ -11,8 +11,9 @@ Low-level APIs:
 - [x] `clust set-private <key>`
 - [x] `clust publish-raw <event>`
 - [x] `clust get-event <id>`
+- [x] `clust get-dm <pubkey>`
 - [x] `clust create-dm-throwaway-key <pubkey> <message>`
-- [ ] `clust create-alias` (return two raw events, currently kind 1, but in the future new kind)
+- [x] `clust create-alias` (return two raw events, currently kind 1, but in the future new kind)
 - [ ] `clust add-contact <name> <contact pubkey> <alias privkey>`
 - [ ] `clust send-new-alias <pubkey>` (send alias with NIP-04, and save alias to config)
 

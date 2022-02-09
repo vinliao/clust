@@ -32,8 +32,12 @@ fn main() {
         publisher::publish_raw(args.subcommand);
     } else if args.command == "get-event" {
         getter::get_event(args.subcommand);
+    } else if args.command == "get-dm" {
+        getter::get_dm(args.subcommand);
     } else if args.command == "create-dm-throwaway-key" {
         util::create_dm_throwaway_key(args.subcommand, args.message);
-    }else if args.command == "create-alias" {
+    } else if args.command == "create-alias" {
+        let linkage_event = util::create_alias();
+        println!("{}", linkage_event.to_string());
     }
 }
