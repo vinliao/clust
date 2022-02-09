@@ -1,16 +1,20 @@
 # Nostr CLI client built with Rust
+This is very unstable and experimental. It's best to not use your "real identity."
+
 APIs:
 - [x] `clust init`
-- [x] `clust generate-keypair`
-- [x] `clust set-private <key>`
-- [ ] `clust add-contact <key>`
-- [ ] `clust message-from <pubkey>`
-- [ ] `clust message-send <pubkey> <message>`
+- [x] `clust chat <name>` (launches a new ui, just like `ranger`, or something)
+- [ ] `clust send <name> <message>`
 
 Low-level APIs:
-- [ ] `clust create-raw-message <pubkey> <message>`
+- [x] `clust generate-keypair`
+- [x] `clust set-private <key>`
 - [x] `clust publish-raw <event>`
 - [x] `clust get-event <id>`
+- [x] `clust create-dm-throwaway-key <pubkey> <message>`
+- [ ] `clust create-alias` (return two raw events, currently kind 1, but in the future new kind)
+- [ ] `clust add-contact <name> <contact pubkey> <alias privkey>`
+- [ ] `clust send-new-alias <pubkey>` (send alias with NIP-04, and save alias to config)
 
 Backend to-do:
 - [x] replace `schnorr_fun` with `secp256k1`
