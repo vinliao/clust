@@ -288,22 +288,39 @@ pub fn add_contact(name: String, contact_pubkey: String, alias_privkey: secp256k
 
     if res.is_ok() {
         // if config file exist
-        let alias_pubkey = get_schnorr_pub(alias_privkey);
-        let contact_json = json!({
-            "name": name,
-            "contact_pubkey": contact_pubkey,
-            "alias_pubkey": alias_pubkey.to_string(),
-            "alias_privkey": alias_privkey.display_secret().to_string()
-        });
 
         let data = res.unwrap();
         let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
-        json_data["contact"]
-            .as_array_mut()
-            .unwrap()
-            .push(contact_json);
+        let contact_json = json_data["contact"]
+            .as_array()
+            .unwrap();
 
-        fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
+        // check whether name exists
+        let mut name_index: i32 = -1;
+        for (index, single_json) in contact_json.iter().enumerate() {
+
+            if single_json["name"] == name {
+                name_index = index as i32;
+            }
+        }
+
+        if name_index == -1 {
+            // only write if name doens't exist
+
+            let alias_pubkey = get_schnorr_pub(alias_privkey);
+            let new_contact = json!({
+                "name": name,
+                "contact_pubkey": contact_pubkey,
+                "alias_pubkey": alias_pubkey.to_string(),
+                "alias_privkey": alias_privkey.display_secret().to_string()
+            });
+
+            json_data["contact"].as_array_mut().unwrap().push(new_contact);
+            fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
+        } else {
+            println!("Contact name already exist, pick another one!")
+        }
+
     } else {
         // if config file doesn't exist
         println!("Config file doesn't exist!")

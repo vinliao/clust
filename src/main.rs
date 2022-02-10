@@ -33,6 +33,7 @@ fn main() {
     } else if args.command == "get-event" {
         getter::get_event(args.subcommand);
     } else if args.command == "get-dm" {
+        // what if get_dm is insereted name as function
         getter::get_dm(args.subcommand);
     } else if args.command == "create-dm-throwaway-key" {
         util::create_dm_throwaway_key(args.subcommand, args.message);
@@ -42,8 +43,8 @@ fn main() {
             util::create_alias_encrypted_event(dummy_pubkey.to_string());
 
         // publisher::publish(encrypted_linkage_events);
-        util::add_contact("Alice".to_string(), dummy_pubkey.to_string(), alias_privkey);
+        util::add_contact("Alice2".to_string(), dummy_pubkey.to_string(), alias_privkey);
 
-        // store the privkey and add contact here
+        // publish the alias only when contact is successfully added
     }
 }
