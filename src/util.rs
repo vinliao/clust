@@ -291,14 +291,11 @@ pub fn add_contact(name: String, contact_pubkey: String, alias_privkey: secp256k
 
         let data = res.unwrap();
         let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
-        let contact_json = json_data["contact"]
-            .as_array()
-            .unwrap();
+        let contact_json = json_data["contact"].as_array().unwrap();
 
         // check whether name exists
         let mut name_index = usize::MAX;
         for (index, single_json) in contact_json.iter().enumerate() {
-
             if single_json["name"] == name {
                 name_index = index;
             }
@@ -315,12 +312,14 @@ pub fn add_contact(name: String, contact_pubkey: String, alias_privkey: secp256k
                 "alias_privkey": alias_privkey.display_secret().to_string()
             });
 
-            json_data["contact"].as_array_mut().unwrap().push(new_contact);
+            json_data["contact"]
+                .as_array_mut()
+                .unwrap()
+                .push(new_contact);
             fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
         } else {
             println!("Contact name already exist, pick another name!")
         }
-
     } else {
         // if config file doesn't exist
         println!("Config file doesn't exist!")
@@ -328,20 +327,19 @@ pub fn add_contact(name: String, contact_pubkey: String, alias_privkey: secp256k
 }
 
 pub fn change_contact_pubkey(name: String, contact_pubkey: String) {
+    // use this when receive alias (type 13)
+
     let res = fs::read_to_string("clust.json");
 
     if res.is_ok() {
         // if config file exist
         let data = res.unwrap();
         let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
-        let contact_json = json_data["contact"]
-            .as_array()
-            .unwrap();
+        let contact_json = json_data["contact"].as_array().unwrap();
 
         // check whether name exists
         let mut name_index = usize::MAX;
         for (index, single_json) in contact_json.iter().enumerate() {
-
             if single_json["name"] == name {
                 name_index = index;
             }
@@ -354,12 +352,17 @@ pub fn change_contact_pubkey(name: String, contact_pubkey: String) {
             // if contact name exists, change contact pubkey
             let mut changed_contact_json = json_data["contact"][name_index].clone();
             changed_contact_json["contact_pubkey"] = serde_json::Value::String(contact_pubkey);
-            json_data["contact"].as_array_mut().unwrap().remove(name_index);
-            json_data["contact"].as_array_mut().unwrap().push(changed_contact_json);
+            json_data["contact"]
+                .as_array_mut()
+                .unwrap()
+                .remove(name_index);
+            json_data["contact"]
+                .as_array_mut()
+                .unwrap()
+                .push(changed_contact_json);
 
             fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
         }
-
     } else {
         // if config file doesn't exist
         println!("Config file doesn't exist!")
