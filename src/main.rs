@@ -36,18 +36,20 @@ fn main() {
     } else if args.command == "get-dm" {
         // what if get_dm is insereted name as function
         getter::get_dm(args.subcommand);
-        
-        // if type 13, create (or change) pubkey on clust.json
 
+        // if type 13, create (or change) pubkey on clust.json
     } else if args.command == "create-dm-throwaway-key" {
         util::create_dm_throwaway_key(args.subcommand, args.message);
     } else if args.command == "send-alias" {
-        let dummy_pubkey = "d269e4e470bbf0113ef7ea3cf0af92d3f709f07f3dba0cc7970d1e86d7afceed";
-        let (encrypted_linkage_events, alias_privkey) =
+        let dummy_pubkey = "4c325422516d6427db23f1a6ed9a254040fad773167d2254f65d6bbef0d2f282";
+        let (encrypted_main_event, encrypted_alt_event, alias_privkey) =
             util::create_alias_encrypted_event(dummy_pubkey.to_string());
 
+        println!("{}", encrypted_main_event);
+        println!("{}", encrypted_alt_event);
+
         // publish the alias only when contact is successfully added
-        util::add_contact(args.subcommand, dummy_pubkey.to_string(), alias_privkey);
+        // util::add_contact(args.subcommand, dummy_pubkey.to_string(), alias_privkey);
         // publisher::publish(encrypted_linkage_events);
     } else if args.command == "change-contact-pubkey" {
         let dummy_pubkey = "45b9d57f1389ea027a0613346904ac76c0e1b20ca41301b477e332d116007064";

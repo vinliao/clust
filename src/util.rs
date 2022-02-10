@@ -71,14 +71,14 @@ pub fn create_dm_throwaway_key(recipient_pub_hex: String, message: String) -> se
 
 pub fn create_alias_encrypted_event(
     recipient_pub_hex: String,
-) -> (serde_json::Value, secp256k1::SecretKey) {
-    let (linkage_events, alias_privkey) = create_alias();
-    let encrypted_linkage_events =
-        create_dm_throwaway_key(recipient_pub_hex, linkage_events.to_string());
-    return (encrypted_linkage_events, alias_privkey);
+) -> (serde_json::Value, serde_json::Value, secp256k1::SecretKey) {
+    let (main_event, alt_event, alias_privkey) = create_alias();
+    let encrypted_main_event = create_dm_throwaway_key(recipient_pub_hex.clone(), main_event.to_string());
+    let encrypted_alt_event = create_dm_throwaway_key(recipient_pub_hex.clone(), alt_event.to_string());
+    return (encrypted_main_event, encrypted_alt_event, alias_privkey);
 }
 
-fn create_alias() -> (serde_json::Value, secp256k1::SecretKey) {
+fn create_alias() -> (serde_json::Value, serde_json::Value, secp256k1::SecretKey) {
     // create an array that consists of main event and alias event
     // the returned privkey is alias' privkey
     // maybe this should be a private function
@@ -144,7 +144,7 @@ fn create_alias() -> (serde_json::Value, secp256k1::SecretKey) {
         "sig": alias_sig.to_string()
     });
 
-    return (json!([main_event, alias_event]), alias_privkey);
+    return (main_event, alias_event, alias_privkey);
 }
 
 fn get_shared_key(
