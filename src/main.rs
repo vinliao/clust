@@ -35,7 +35,8 @@ fn main() {
         println!("{}", event);
     } else if args.command == "get-dm" {
         // what if get_dm is insereted name as function
-        getter::get_dm(args.subcommand);
+        let event = getter::get_dm(args.subcommand);
+        util::decrypt_dm(event);
 
         // if type 13, create (or change) pubkey on clust.json
     } else if args.command == "create-dm-throwaway-key" {

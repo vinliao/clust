@@ -78,6 +78,44 @@ pub fn create_alias_encrypted_event(
     return (encrypted_main_event, encrypted_alt_event, alias_privkey);
 }
 
+pub fn decrypt_dm(raw_string: String) {
+    let payload: serde_json::Value = serde_json::from_str(&raw_string).unwrap();
+    let event = payload[2].clone();
+    // println!("{}", event);
+
+    // dummy keypairs
+    let dummy_privkey_hex = "67eefda9d883b56d81f461a816f9cd95ccf00ba6bdd457f197a562d05499d499";
+    let dummy_privkey_byte_array = hex::decode(dummy_privkey_hex).unwrap();
+    let dummy_privkey = SecretKey::from_slice(&dummy_privkey_byte_array[..]).expect("32 bytes, within curve order");
+
+    let raw_event_pubkey_hex = event["pubkey"].as_str().unwrap().to_string();
+    let event_pubkey_hex = format!("03{}", raw_event_pubkey_hex);
+    let event_pubkey_byte_array = hex::decode(event_pubkey_hex).unwrap();
+    let event_pubkey = secp256k1::PublicKey::from_slice(&event_pubkey_byte_array[..]).expect("32 bytes, within curve order");
+
+    let (_, shared_privkey, _) = get_shared_key(dummy_privkey, event_pubkey);
+    let content = event["content"].as_str().unwrap().to_string();
+    let (iv_bytes, encrypted_content) = separate_iv_ciphertext(content);
+
+    let content = decrypt_ecdh(shared_privkey, iv_bytes, encrypted_content);
+    println!("{}", content);
+}
+
+fn separate_iv_ciphertext(encrypted_content: String) -> ([u8; 16], Vec<u8>) { 
+    let iv_position = encrypted_content.find("?iv=").unwrap();
+    let encrypted_content_base64 = &encrypted_content[..iv_position];
+    let iv_base64 = &encrypted_content[iv_position + 4..];
+
+    let encrypted_content = base64::decode(encrypted_content_base64).unwrap();
+    let iv_vec = base64::decode(iv_base64).unwrap();
+
+    // turn vec to bytes
+    let mut iv_bytes = [0u8; 16];
+    iv_bytes.copy_from_slice(&iv_vec[..]);
+
+    return (iv_bytes, encrypted_content);
+}
+
 fn create_alias() -> (serde_json::Value, serde_json::Value, secp256k1::SecretKey) {
     // create an array that consists of main event and alias event
     // the returned privkey is alias' privkey
@@ -147,6 +185,7 @@ fn create_alias() -> (serde_json::Value, serde_json::Value, secp256k1::SecretKey
     return (main_event, alias_event, alias_privkey);
 }
 
+// todo: shared pubkey isn't needed anymore as a return value
 fn get_shared_key(
     sender_priv: secp256k1::SecretKey,
     recipient_pub: secp256k1::PublicKey,
@@ -240,6 +279,7 @@ fn get_event_id(
 fn get_privkey() -> secp256k1::SecretKey {
     let data = fs::read_to_string("clust.json").expect("Unable to read config file");
     let json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
+    // todo: use as_str().unwrap().to_string() instead of directly to_string()
     let privkey_hex_raw = json_data["main_privkey"].to_string();
     let privkey_hex = privkey_hex_raw.replace("\"", "");
     let privkey_byte_array = hex::decode(privkey_hex).unwrap();
