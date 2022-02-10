@@ -283,6 +283,7 @@ pub fn generate_config() {
     }
 }
 
+// todo: this and change_contact_pubkey can return Result (enum)
 pub fn add_contact(name: String, contact_pubkey: String, alias_privkey: secp256k1::SecretKey) {
     let res = fs::read_to_string("clust.json");
 

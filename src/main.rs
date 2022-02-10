@@ -31,10 +31,14 @@ fn main() {
     } else if args.command == "publish-raw" {
         publisher::publish_raw(args.subcommand);
     } else if args.command == "get-event" {
-        getter::get_event(args.subcommand);
+        let event = getter::get_event(args.subcommand);
+        println!("{}", event);
     } else if args.command == "get-dm" {
         // what if get_dm is insereted name as function
         getter::get_dm(args.subcommand);
+        
+        // if type 13, create (or change) pubkey on clust.json
+
     } else if args.command == "create-dm-throwaway-key" {
         util::create_dm_throwaway_key(args.subcommand, args.message);
     } else if args.command == "send-alias" {

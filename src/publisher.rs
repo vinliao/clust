@@ -23,18 +23,12 @@ pub fn publish(event: serde_json::Value) {
     // format: ["EVENT", event]
     // the second event is the json
     let payload = json!(["EVENT", event]);
-    println!("{}", payload);
-
     socket
         .write_message(Message::Text(payload.to_string()))
         .unwrap();
 
-    loop {
-        let msg = socket.read_message().expect("Error reading message");
-        println!("Received: {}", msg);
-    }
-
-    // socket.close(None);
+    let msg = socket.read_message().expect("Error reading message");
+    println!("Received: {}", msg);
 }
 
 pub fn publish_raw(event: String) {
@@ -55,14 +49,8 @@ pub fn publish_raw(event: String) {
     // format: ["EVENT", event]
     // the second event is the json
     let payload = format!("[{}, {}]", "\"EVENT\"", event);
-    println!("{}", payload);
-
     socket.write_message(Message::Text(payload.to_string())).unwrap();
 
-    loop {
-        let msg = socket.read_message().expect("Error reading message");
-        println!("Received: {}", msg);
-    }
-
-    // socket.close(None);
+    let msg = socket.read_message().expect("Error reading message");
+    println!("Received: {}", msg);
 }
