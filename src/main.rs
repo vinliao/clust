@@ -36,8 +36,14 @@ fn main() {
         getter::get_dm(args.subcommand);
     } else if args.command == "create-dm-throwaway-key" {
         util::create_dm_throwaway_key(args.subcommand, args.message);
-    } else if args.command == "create-alias" {
-        let (linkage_events, _alias_privkey) = util::create_alias();
-        println!("{}", linkage_events.to_string());
+    } else if args.command == "send-alias" {
+        let dummy_pubkey = "d269e4e470bbf0113ef7ea3cf0af92d3f709f07f3dba0cc7970d1e86d7afceed";
+        let (encrypted_linkage_events, alias_privkey) =
+            util::create_alias_encrypted_event(dummy_pubkey.to_string());
+
+        // publisher::publish(encrypted_linkage_events);
+        util::add_contact("Alice".to_string(), dummy_pubkey.to_string(), alias_privkey);
+
+        // store the privkey and add contact here
     }
 }

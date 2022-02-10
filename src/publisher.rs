@@ -6,8 +6,8 @@ use url::Url;
 
 pub fn publish(event: serde_json::Value) {
     // let url_string = "ws://localhost:8080";
-    // let url_string = "wss://nostr-pub.wellorder.net";
-    let url_string = "wss://relayer.fiatjaf.com";
+    let url_string = "wss://nostr-dev.wellorder.net";
+    // let url_string = "wss://relayer.fiatjaf.com";
     let url = Url::parse(url_string).unwrap();
 
     let (mut socket, response) = connect(url).expect("Can't connect");

@@ -51,7 +51,8 @@ pub fn create_dm_throwaway_key(recipient_pub_hex: String, message: String) -> se
 
     // sign id
     let event_id_byte = hex::decode(event_id_hex.clone()).unwrap();
-    let event_id_message = Message::from_slice(&event_id_byte[..]).expect("32 bytes, within curve order");
+    let event_id_message =
+        Message::from_slice(&event_id_byte[..]).expect("32 bytes, within curve order");
     // sign from throwaway keypair
     let sig = secp.sign_schnorr(&event_id_message, &throwaway_keypair);
 
@@ -65,13 +66,22 @@ pub fn create_dm_throwaway_key(recipient_pub_hex: String, message: String) -> se
         "sig": sig.to_string()
     });
 
-    println!("{}", event);
-
     return event;
 }
 
-pub fn create_alias() -> (serde_json::Value, secp256k1::SecretKey) {
+pub fn create_alias_encrypted_event(
+    recipient_pub_hex: String,
+) -> (serde_json::Value, secp256k1::SecretKey) {
+    let (linkage_events, alias_privkey) = create_alias();
+    let encrypted_linkage_events =
+        create_dm_throwaway_key(recipient_pub_hex, linkage_events.to_string());
+    return (encrypted_linkage_events, alias_privkey);
+}
+
+fn create_alias() -> (serde_json::Value, secp256k1::SecretKey) {
     // create an array that consists of main event and alias event
+    // the returned privkey is alias' privkey
+    // maybe this should be a private function
 
     let secp = Secp256k1::new();
     let main_privkey = get_privkey();
@@ -87,9 +97,16 @@ pub fn create_alias() -> (serde_json::Value, secp256k1::SecretKey) {
     // todo: duplicate code, refactor
     let main_tag = json!([["p", alias_pubkey.to_string()]]);
     // todo: change "kind" to new kind defined in new NIP
-    let main_event_id_hex = get_event_id(main_pubkey.to_string(), "".to_string(), unix_time, 1, main_tag.clone());
+    let main_event_id_hex = get_event_id(
+        main_pubkey.to_string(),
+        "".to_string(),
+        unix_time,
+        13,
+        main_tag.clone(),
+    );
     let main_event_id_byte = hex::decode(main_event_id_hex.clone()).unwrap();
-    let main_event_id_message = Message::from_slice(&main_event_id_byte[..]).expect("32 bytes, within curve order");
+    let main_event_id_message =
+        Message::from_slice(&main_event_id_byte[..]).expect("32 bytes, within curve order");
     let main_sig = secp.sign_schnorr(&main_event_id_message, &main_keypair);
 
     // todo: change kind to new kind defined in new NIP
@@ -97,7 +114,7 @@ pub fn create_alias() -> (serde_json::Value, secp256k1::SecretKey) {
         "id": main_event_id_hex,
         "pubkey": main_pubkey.to_string(),
         "created_at": unix_time,
-        "kind": 1,
+        "kind": 13,
         "tags": main_tag,
         "content": "",
         "sig": main_sig.to_string()
@@ -105,16 +122,23 @@ pub fn create_alias() -> (serde_json::Value, secp256k1::SecretKey) {
 
     let alias_tag = json!([["p", main_pubkey.to_string()], ["e", main_event_id_hex]]);
     // todo: change "kind" to new kind defined in new NIP
-    let alias_event_id_hex = get_event_id(alias_pubkey.to_string(), "".to_string(), unix_time, 1, alias_tag.clone());
+    let alias_event_id_hex = get_event_id(
+        alias_pubkey.to_string(),
+        "".to_string(),
+        unix_time,
+        13,
+        alias_tag.clone(),
+    );
     let alias_event_id_byte = hex::decode(alias_event_id_hex.clone()).unwrap();
-    let alias_event_id_message = Message::from_slice(&alias_event_id_byte[..]).expect("32 bytes, within curve order");
+    let alias_event_id_message =
+        Message::from_slice(&alias_event_id_byte[..]).expect("32 bytes, within curve order");
     let alias_sig = secp.sign_schnorr(&alias_event_id_message, &alias_keypair);
 
     let alias_event = json!({
         "id": alias_event_id_hex,
         "pubkey": alias_pubkey.to_string(),
         "created_at": unix_time,
-        "kind": 1,
+        "kind": 13,
         "tags": alias_tag,
         "content": "",
         "sig": alias_sig.to_string()
@@ -216,7 +240,7 @@ fn get_event_id(
 fn get_privkey() -> secp256k1::SecretKey {
     let data = fs::read_to_string("clust.json").expect("Unable to read config file");
     let json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
-    let privkey_hex_raw = json_data["privkey"].to_string();
+    let privkey_hex_raw = json_data["main_privkey"].to_string();
     let privkey_hex = privkey_hex_raw.replace("\"", "");
     let privkey_byte_array = hex::decode(privkey_hex).unwrap();
     return SecretKey::from_slice(&privkey_byte_array[..]).expect("32 bytes, within curve order");
@@ -230,7 +254,7 @@ pub fn set_privkey(privkey: String) {
         let data = res.unwrap();
         let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
 
-        json_data["privkey"] = serde_json::Value::String(privkey);
+        json_data["main_privkey"] = serde_json::Value::String(privkey);
         fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
     } else {
         // if config file doesn't exist
@@ -248,12 +272,40 @@ pub fn generate_config() {
         // if file doesn't exist
         let (privkey, _) = generate_key();
         let json_data = json!({
-            "privkey": privkey.display_secret().to_string(),
-            "relay": []
+            "main_privkey": privkey.display_secret().to_string(),
+            "relay": [],
+            "contact": []
         });
 
         fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
     } else {
         println!("Config file exists!");
+    }
+}
+
+pub fn add_contact(name: String, contact_pubkey: String, alias_privkey: secp256k1::SecretKey) {
+    let res = fs::read_to_string("clust.json");
+
+    if res.is_ok() {
+        // if config file exist
+        let alias_pubkey = get_schnorr_pub(alias_privkey);
+        let contact_json = json!({
+            "name": name,
+            "contact_pubkey": contact_pubkey,
+            "alias_pubkey": alias_pubkey.to_string(),
+            "alias_privkey": alias_privkey.display_secret().to_string()
+        });
+
+        let data = res.unwrap();
+        let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
+        json_data["contact"]
+            .as_array_mut()
+            .unwrap()
+            .push(contact_json);
+
+        fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
+    } else {
+        // if config file doesn't exist
+        println!("Config file doesn't exist!")
     }
 }
