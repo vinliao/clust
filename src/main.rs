@@ -43,8 +43,11 @@ fn main() {
             util::create_alias_encrypted_event(dummy_pubkey.to_string());
 
         // publisher::publish(encrypted_linkage_events);
-        util::add_contact("Alice2".to_string(), dummy_pubkey.to_string(), alias_privkey);
+        util::add_contact(args.subcommand, dummy_pubkey.to_string(), alias_privkey);
 
         // publish the alias only when contact is successfully added
+    } else if args.command == "change-contact-pubkey" {
+        let dummy_pubkey = "45b9d57f1389ea027a0613346904ac76c0e1b20ca41301b477e332d116007064";
+        util::change_contact_pubkey(args.subcommand, dummy_pubkey.to_string());
     }
 }
