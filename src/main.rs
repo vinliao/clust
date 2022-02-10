@@ -2,6 +2,7 @@ use clap::Parser;
 mod getter;
 mod publisher;
 mod util;
+use secp256k1;
 
 #[derive(Parser)]
 struct Cli {
@@ -36,7 +37,11 @@ fn main() {
     } else if args.command == "get-dm" {
         // what if get_dm is insereted name as function
         let event = getter::get_dm(args.subcommand);
-        util::decrypt_dm(event);
+
+        let dummy_privkey_hex = "67eefda9d883b56d81f461a816f9cd95ccf00ba6bdd457f197a562d05499d499";
+        let dummy_privkey_byte_array = hex::decode(dummy_privkey_hex).unwrap();
+        let dummy_privkey = secp256k1::SecretKey::from_slice(&dummy_privkey_byte_array[..]).expect("32 bytes, within curve order");
+        println!("{}", util::decrypt_dm(event, dummy_privkey));
 
         // if type 13, create (or change) pubkey on clust.json
     } else if args.command == "create-dm-throwaway-key" {
