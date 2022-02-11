@@ -13,6 +13,8 @@ use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::{fs, str};
 
+type Aes256Cbc = Cbc<Aes256, Pkcs7>;
+
 pub fn generate_key() -> (secp256k1::SecretKey, secp256k1::XOnlyPublicKey) {
     let secp = Secp256k1::new();
     let mut rng = OsRng::new().expect("OsRng");
@@ -23,26 +25,27 @@ pub fn generate_key() -> (secp256k1::SecretKey, secp256k1::XOnlyPublicKey) {
     return (privkey, pubkey);
 }
 
-pub fn create_dm_throwaway_key(recipient_pub_hex: String, message: String) -> serde_json::Value {
+pub fn create_dm_event(recipient_pub_hex: &str, message: &str) -> serde_json::Value {
     // create dm event to a pubkey with random key
 
     let secp = Secp256k1::new();
 
-    let (throwaway_privkey, throwaway_pubkey) = generate_key();
-    let throwaway_keypair = secp256k1::KeyPair::from_secret_key(&secp, throwaway_privkey);
+    let sender_privkey = get_privkey();
+    let sender_pubkey = get_schnorr_pub(sender_privkey);
+    let sender_keypair = secp256k1::KeyPair::from_secret_key(&secp, sender_privkey);
 
     let pubkey_hex = format!("03{}", recipient_pub_hex);
     let pubkey_byte_array = hex::decode(pubkey_hex).unwrap();
     let recipient_pub =
         PublicKey::from_slice(&pubkey_byte_array[..]).expect("32 bytes, within curve order");
-    let (_, shared_priv) = get_shared_key(throwaway_privkey, recipient_pub);
+    let shared_priv = get_shared_key(sender_privkey, recipient_pub);
 
     // create data
     let time = Local::now();
     let unix_time = time.timestamp();
     let encrypted_message = encrypt_ecdh(shared_priv, message);
     let event_id_hex = get_event_id(
-        throwaway_pubkey.to_string(),
+        sender_pubkey.to_string(),
         encrypted_message.clone(),
         unix_time,
         4,
@@ -54,11 +57,11 @@ pub fn create_dm_throwaway_key(recipient_pub_hex: String, message: String) -> se
     let event_id_message =
         Message::from_slice(&event_id_byte[..]).expect("32 bytes, within curve order");
     // sign from throwaway keypair
-    let sig = secp.sign_schnorr(&event_id_message, &throwaway_keypair);
+    let sig = secp.sign_schnorr(&event_id_message, &sender_keypair);
 
     let event = json!({
         "id": event_id_hex,
-        "pubkey": throwaway_pubkey.to_string(),
+        "pubkey": sender_pubkey.to_string(),
         "created_at": unix_time,
         "kind": 4,
         "tags": [["p", recipient_pub_hex]],
@@ -69,18 +72,7 @@ pub fn create_dm_throwaway_key(recipient_pub_hex: String, message: String) -> se
     return event;
 }
 
-pub fn create_alias_encrypted_event(
-    recipient_pub_hex: String,
-) -> (serde_json::Value, serde_json::Value, secp256k1::SecretKey) {
-    let (main_event, alt_event, alias_privkey) = create_alias();
-    let encrypted_main_event =
-        create_dm_throwaway_key(recipient_pub_hex.clone(), main_event.to_string());
-    let encrypted_alt_event =
-        create_dm_throwaway_key(recipient_pub_hex.clone(), alt_event.to_string());
-    return (encrypted_main_event, encrypted_alt_event, alias_privkey);
-}
-
-pub fn decrypt_dm(event: serde_json::Value, privkey: secp256k1::SecretKey) -> String {
+pub fn decrypt_dm(event: serde_json::Value) -> String {
     // extract pubkey from event
     let raw_event_pubkey_hex = event["pubkey"].as_str().unwrap().to_string();
     let event_pubkey_hex = format!("03{}", raw_event_pubkey_hex);
@@ -89,11 +81,20 @@ pub fn decrypt_dm(event: serde_json::Value, privkey: secp256k1::SecretKey) -> St
         .expect("32 bytes, within curve order");
 
     // get iv and encrypted content from event
-    let (_, shared_privkey) = get_shared_key(privkey, event_pubkey);
+    let privkey = get_privkey();
+    let shared_privkey = get_shared_key(privkey, event_pubkey);
     let content = event["content"].as_str().unwrap().to_string();
     let (iv_bytes, encrypted_content) = separate_iv_ciphertext(content);
 
     return decrypt_ecdh(shared_privkey, iv_bytes, encrypted_content);
+}
+
+// for external use
+pub fn get_pubkey() -> secp256k1::XOnlyPublicKey {
+    let secp = Secp256k1::new();
+    let privkey = get_privkey();
+    let keypair = secp256k1::KeyPair::from_secret_key(&secp, privkey);
+    return secp256k1::XOnlyPublicKey::from_keypair(&keypair);
 }
 
 fn separate_iv_ciphertext(encrypted_content: String) -> ([u8; 16], Vec<u8>) {
@@ -111,92 +112,16 @@ fn separate_iv_ciphertext(encrypted_content: String) -> ([u8; 16], Vec<u8>) {
     return (iv_bytes, encrypted_content);
 }
 
-fn create_alias() -> (serde_json::Value, serde_json::Value, secp256k1::SecretKey) {
-    // create an array that consists of main event and alias event
-    // the returned privkey is alias' privkey
-    // maybe this should be a private function
-
-    let secp = Secp256k1::new();
-    let main_privkey = get_privkey();
-    let main_pubkey = get_schnorr_pub(main_privkey);
-    let main_keypair = secp256k1::KeyPair::from_secret_key(&secp, main_privkey);
-
-    let (alias_privkey, alias_pubkey) = generate_key();
-    let alias_keypair = secp256k1::KeyPair::from_secret_key(&secp, alias_privkey);
-
-    let time = Local::now();
-    let unix_time = time.timestamp();
-
-    // todo: duplicate code, refactor
-    let main_tag = json!([["p", alias_pubkey.to_string()]]);
-    // todo: change "kind" to new kind defined in new NIP
-    let main_event_id_hex = get_event_id(
-        main_pubkey.to_string(),
-        "".to_string(),
-        unix_time,
-        13,
-        main_tag.clone(),
-    );
-    let main_event_id_byte = hex::decode(main_event_id_hex.clone()).unwrap();
-    let main_event_id_message =
-        Message::from_slice(&main_event_id_byte[..]).expect("32 bytes, within curve order");
-    let main_sig = secp.sign_schnorr(&main_event_id_message, &main_keypair);
-
-    // todo: change kind to new kind defined in new NIP
-    let main_event = json!({
-        "id": main_event_id_hex,
-        "pubkey": main_pubkey.to_string(),
-        "created_at": unix_time,
-        "kind": 13,
-        "tags": main_tag,
-        "content": "",
-        "sig": main_sig.to_string()
-    });
-
-    let alias_tag = json!([["p", main_pubkey.to_string()], ["e", main_event_id_hex]]);
-    // todo: change "kind" to new kind defined in new NIP
-    let alias_event_id_hex = get_event_id(
-        alias_pubkey.to_string(),
-        "".to_string(),
-        unix_time,
-        13,
-        alias_tag.clone(),
-    );
-    let alias_event_id_byte = hex::decode(alias_event_id_hex.clone()).unwrap();
-    let alias_event_id_message =
-        Message::from_slice(&alias_event_id_byte[..]).expect("32 bytes, within curve order");
-    let alias_sig = secp.sign_schnorr(&alias_event_id_message, &alias_keypair);
-
-    let alias_event = json!({
-        "id": alias_event_id_hex,
-        "pubkey": alias_pubkey.to_string(),
-        "created_at": unix_time,
-        "kind": 13,
-        "tags": alias_tag,
-        "content": "",
-        "sig": alias_sig.to_string()
-    });
-
-    return (main_event, alias_event, alias_privkey);
-}
-
 // todo: shared pubkey isn't needed anymore as a return value
 fn get_shared_key(
-    sender_priv: secp256k1::SecretKey,
+    sender_privkey: secp256k1::SecretKey,
     recipient_pub: secp256k1::PublicKey,
-) -> (
-    secp256k1::KeyPair,
-    secp256k1::SecretKey
-) {
-    let secp = Secp256k1::new();
-
-    let shared_byte_array = secp256k1::ecdh::SharedSecret::new(&recipient_pub, &sender_priv);
-    // let shared_hex = hex::encode(shared_byte_array); // can be used to debug
+) -> secp256k1::SecretKey {
+    let shared_byte_array = secp256k1::ecdh::SharedSecret::new(&recipient_pub, &sender_privkey);
     let shared_privkey =
         SecretKey::from_slice(&shared_byte_array[..]).expect("32 bytes, within curve order");
-    let shared_keypair = secp256k1::KeyPair::from_secret_key(&secp, shared_privkey);
 
-    return (shared_keypair, shared_privkey);
+    return shared_privkey;
 }
 
 fn get_schnorr_pub(privkey: secp256k1::SecretKey) -> secp256k1::XOnlyPublicKey {
@@ -205,26 +130,17 @@ fn get_schnorr_pub(privkey: secp256k1::SecretKey) -> secp256k1::XOnlyPublicKey {
     return secp256k1::XOnlyPublicKey::from_keypair(&keypair);
 }
 
-fn encrypt_ecdh(shared_priv: secp256k1::SecretKey, content: String) -> String {
+fn encrypt_ecdh(shared_priv: secp256k1::SecretKey, content: &str) -> String {
     // encrypt content
-    type Aes256Cbc = Cbc<Aes256, Pkcs7>;
 
-    // random bytes
-    let mut iv_bytes = [0u8; 16];
-    rand::thread_rng().fill(&mut iv_bytes);
-
-    let plaintext_json = content;
-    let plaintext = plaintext_json.to_string();
-    let plaintext_bytes = plaintext.as_bytes();
+    let iv_bytes: [u8; 16] = secp256k1::rand::random();
 
     let cipher =
         Aes256Cbc::new_from_slices(&shared_priv.serialize_secret()[..], &iv_bytes).unwrap();
-    // buffer must have enough space for message+padding
-    let mut buffer = [0u8; 5000];
-    // copy message to the buffer
-    let pos = plaintext_bytes.len();
-    buffer[..pos].copy_from_slice(plaintext_bytes);
-    let ciphertext = cipher.encrypt(&mut buffer, pos).unwrap();
+    let ciphertext = cipher.encrypt_vec(content.as_bytes());
+
+    println!("{:?}", iv_bytes);
+    println!("{:?}", ciphertext);
     let ciphertext_string = format!(
         "{}?iv={}",
         base64::encode(ciphertext),
@@ -240,7 +156,6 @@ fn decrypt_ecdh(
     ciphertext: Vec<u8>,
 ) -> String {
     // decrypt content
-    type Aes256Cbc = Cbc<Aes256, Pkcs7>;
 
     let cipher =
         Aes256Cbc::new_from_slices(&shared_priv.serialize_secret()[..], &iv_bytes).unwrap();
@@ -317,7 +232,7 @@ pub fn generate_config() {
 }
 
 // todo: this and change_contact_pubkey can return Result (enum)
-pub fn add_contact(name: String, contact_pubkey: String, alias_privkey: secp256k1::SecretKey) {
+pub fn add_contact(name: String, contact_pubkey: String) {
     let res = fs::read_to_string("clust.json");
 
     if res.is_ok() {
@@ -338,12 +253,9 @@ pub fn add_contact(name: String, contact_pubkey: String, alias_privkey: secp256k
         if name_index == usize::MAX {
             // if contact name doesn't exist
 
-            let alias_pubkey = get_schnorr_pub(alias_privkey);
             let new_contact = json!({
                 "name": name,
                 "contact_pubkey": contact_pubkey,
-                "alias_pubkey": alias_pubkey.to_string(),
-                "alias_privkey": alias_privkey.display_secret().to_string()
             });
 
             json_data["contact"]
@@ -352,6 +264,7 @@ pub fn add_contact(name: String, contact_pubkey: String, alias_privkey: secp256k
                 .push(new_contact);
             fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
         } else {
+            // if contact name exist, don't do anything
             println!("Contact name already exist, pick another name!")
         }
     } else {
@@ -361,7 +274,6 @@ pub fn add_contact(name: String, contact_pubkey: String, alias_privkey: secp256k
 }
 
 pub fn change_contact_pubkey(name: String, contact_pubkey: String) {
-    // use this when receive alias (type 13)
 
     let res = fs::read_to_string("clust.json");
 
