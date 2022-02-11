@@ -11,7 +11,7 @@ struct Cli {
     subcommand: String,
 
     #[clap(default_value = "")]
-    message: String,
+    subcommand_2: String,
 }
 
 fn main() {
@@ -33,7 +33,10 @@ fn main() {
         println!("{}", event);
     } else if args.command == "create-dm" {
         let recipient_pub_hex = "ffb7e7b5a20bb1cf55a4b1d6ba610ddb97e84aa27708fdbb0b1e7e486fec1a50";
-        println!("{}", util::create_dm_event(recipient_pub_hex, "helloworldhelloworldhelloworld"));
+        println!(
+            "{}",
+            util::create_dm_event(recipient_pub_hex, "helloworldhelloworldhelloworld")
+        );
     } else if args.command == "get-dm" {
         let pubkey_hex = util::get_pubkey().to_string();
         let raw_string = getter::get_dm(pubkey_hex);
@@ -41,5 +44,9 @@ fn main() {
         println!("{}", payload);
         let dm = util::decrypt_dm(payload[2].clone());
         println!("{}", dm);
+    } else if args.command == "add-contact" {
+        util::add_contact(args.subcommand, args.subcommand_2);
+    } else if args.command == "change-contact-pubkey" {
+        util::change_contact_pubkey(args.subcommand, args.subcommand_2);
     }
 }

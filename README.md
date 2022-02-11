@@ -2,19 +2,17 @@
 This is very unstable and experimental. It's best to not use your "real identity."
 
 APIs:
-- [x] `clust init`
-- [x] `clust chat <name>` (launches a new ui, just like `ranger`, or something)
-- [ ] `clust send <name> <message>`
+- [ ] `clust chat <name>`
 
 Low-level APIs:
+- [x] `clust init`
 - [x] `clust generate-keypair`
 - [x] `clust set-private <key>`
 - [x] `clust publish-raw <event>`
 - [x] `clust get-event <id>`
 - [x] `clust get-dm <pubkey>`
-- [x] `clust create-dm-throwaway-key <pubkey> <message>`
-- [x] `clust send-alias`
-- [x] `clust change-contact-pubkey <name> <pubkey>` (used after having received alias)
+- [x] `clust add-contact <name> <pubkey>`
+- [x] `clust change-contact-pubkey <name> <pubkey>`
 
 Backend to-do:
 - [x] replace `schnorr_fun` with `secp256k1`
