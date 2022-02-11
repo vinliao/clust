@@ -184,15 +184,11 @@ fn get_event_id(
     return event_id_hex;
 }
 
-// todo: these fs stuff needs to be refactored
 fn get_privkey() -> secp256k1::SecretKey {
     let data = fs::read_to_string("clust.json").expect("Unable to read config file");
     let json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
-    // todo: use as_str().unwrap().to_string() instead of directly to_string()
-    let privkey_hex_raw = json_data["main_privkey"].to_string();
-    let privkey_hex = privkey_hex_raw.replace("\"", "");
-    let privkey_byte_array = hex::decode(privkey_hex).unwrap();
-    return SecretKey::from_slice(&privkey_byte_array[..]).expect("32 bytes, within curve order");
+    let privkey_hex_raw = json_data["main_privkey"].as_str().unwrap();
+    return SecretKey::from_str(privkey_hex_raw).unwrap();
 }
 
 pub fn set_privkey(privkey: String) {
