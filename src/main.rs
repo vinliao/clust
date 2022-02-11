@@ -36,20 +36,28 @@ fn main() {
         println!("{}", event);
     } else if args.command == "get-dm" {
         // what if get_dm is insereted name as function
-        let event = getter::get_dm(args.subcommand);
+        let dummy_pubkey_hex = "466a107552bb71d6df6120055b916afbbd038eeadb9c449087ff9cad6933aaa9";
+        let raw_string = getter::get_dm(dummy_pubkey_hex.to_string());
+        let payload: serde_json::Value = serde_json::from_str(&raw_string).unwrap();
 
-        let dummy_privkey_hex = "67eefda9d883b56d81f461a816f9cd95ccf00ba6bdd457f197a562d05499d499";
+        let dummy_privkey_hex = "705a26e1936321f191fe218b188a9b41828fa3f151a6a1a4766e39b9db8e972b";
         let dummy_privkey_byte_array = hex::decode(dummy_privkey_hex).unwrap();
         let dummy_privkey = secp256k1::SecretKey::from_slice(&dummy_privkey_byte_array[..]).expect("32 bytes, within curve order");
-        println!("{}", util::decrypt_dm(event, dummy_privkey));
+        println!("{}", util::decrypt_dm(payload[2].clone(), dummy_privkey));
 
+        // idea: extract event id of main event from alt event, then pull the event
+        // when both even is present, add contact
+        // this way, even when both event are separated, they can be referenced
+        // use branle to test to send and receive stuff
+
+        // check sig is legit or not, all sig must be checked by client
         // if type 13, create (or change) pubkey on clust.json
     } else if args.command == "create-dm-throwaway-key" {
         util::create_dm_throwaway_key(args.subcommand, args.message);
     } else if args.command == "send-alias" {
-        let dummy_pubkey = "4c325422516d6427db23f1a6ed9a254040fad773167d2254f65d6bbef0d2f282";
+        let dummy_pubkey_hex = "466a107552bb71d6df6120055b916afbbd038eeadb9c449087ff9cad6933aaa9";
         let (encrypted_main_event, encrypted_alt_event, alias_privkey) =
-            util::create_alias_encrypted_event(dummy_pubkey.to_string());
+            util::create_alias_encrypted_event(dummy_pubkey_hex.to_string());
 
         println!("{}", encrypted_main_event);
         println!("{}", encrypted_alt_event);

@@ -80,10 +80,7 @@ pub fn create_alias_encrypted_event(
     return (encrypted_main_event, encrypted_alt_event, alias_privkey);
 }
 
-pub fn decrypt_dm(raw_string: String, privkey: secp256k1::SecretKey) -> String {
-    let payload: serde_json::Value = serde_json::from_str(&raw_string).unwrap();
-    let event = payload[2].clone();
-
+pub fn decrypt_dm(event: serde_json::Value, privkey: secp256k1::SecretKey) -> String {
     // extract pubkey from event
     let raw_event_pubkey_hex = event["pubkey"].as_str().unwrap().to_string();
     let event_pubkey_hex = format!("03{}", raw_event_pubkey_hex);
@@ -96,8 +93,7 @@ pub fn decrypt_dm(raw_string: String, privkey: secp256k1::SecretKey) -> String {
     let content = event["content"].as_str().unwrap().to_string();
     let (iv_bytes, encrypted_content) = separate_iv_ciphertext(content);
 
-    let content = decrypt_ecdh(shared_privkey, iv_bytes, encrypted_content);
-    return content;
+    return decrypt_ecdh(shared_privkey, iv_bytes, encrypted_content);
 }
 
 fn separate_iv_ciphertext(encrypted_content: String) -> ([u8; 16], Vec<u8>) {
@@ -199,7 +195,6 @@ fn get_shared_key(
     let shared_privkey =
         SecretKey::from_slice(&shared_byte_array[..]).expect("32 bytes, within curve order");
     let shared_keypair = secp256k1::KeyPair::from_secret_key(&secp, shared_privkey);
-    let shared_pub = secp256k1::XOnlyPublicKey::from_keypair(&shared_keypair);
 
     return (shared_keypair, shared_privkey);
 }

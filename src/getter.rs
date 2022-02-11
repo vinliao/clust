@@ -5,8 +5,8 @@ use tungstenite::{connect, Message};
 use url::Url;
 
 fn get(payload: String) -> String {
-    let url_string = "wss://relayer.fiatjaf.com";
-    // let url_string = "wss://nostr-pub.wellorder.net";
+    // let url_string = "wss://relayer.fiatjaf.com";
+    let url_string = "wss://nostr-pub.wellorder.net";
     let url = Url::parse(url_string).unwrap();
 
     let (mut socket, response) = connect(url).expect("Can't connect");
