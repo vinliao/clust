@@ -6,11 +6,11 @@ use block_modes::block_padding::Pkcs7;
 use block_modes::{BlockMode, Cbc};
 use chrono::Local;
 use hex;
-use rand::Rng;
 use secp256k1::rand::rngs::OsRng;
-use secp256k1::{Message, PublicKey, Secp256k1, SecretKey};
+use secp256k1::{Message, Secp256k1, SecretKey};
 use serde_json::json;
 use sha2::{Digest, Sha256};
+use std::str::FromStr;
 use std::{fs, str};
 
 type Aes256Cbc = Cbc<Aes256, Pkcs7>;
@@ -34,10 +34,8 @@ pub fn create_dm_event(recipient_pub_hex: &str, message: &str) -> serde_json::Va
     let sender_pubkey = get_schnorr_pub(sender_privkey);
     let sender_keypair = secp256k1::KeyPair::from_secret_key(&secp, sender_privkey);
 
-    let pubkey_hex = format!("03{}", recipient_pub_hex);
-    let pubkey_byte_array = hex::decode(pubkey_hex).unwrap();
-    let recipient_pub =
-        PublicKey::from_slice(&pubkey_byte_array[..]).expect("32 bytes, within curve order");
+    let recipient_schnorr = secp256k1::XOnlyPublicKey::from_str(recipient_pub_hex).unwrap();
+    let recipient_pub = schnorr_to_normal_pub(recipient_schnorr);
     let shared_priv = get_shared_key(sender_privkey, recipient_pub);
 
     // create data
@@ -75,10 +73,8 @@ pub fn create_dm_event(recipient_pub_hex: &str, message: &str) -> serde_json::Va
 pub fn decrypt_dm(event: serde_json::Value) -> String {
     // extract pubkey from event
     let raw_event_pubkey_hex = event["pubkey"].as_str().unwrap().to_string();
-    let event_pubkey_hex = format!("03{}", raw_event_pubkey_hex);
-    let event_pubkey_byte_array = hex::decode(event_pubkey_hex).unwrap();
-    let event_pubkey = secp256k1::PublicKey::from_slice(&event_pubkey_byte_array[..])
-        .expect("32 bytes, within curve order");
+    let raw_event_pubkey = secp256k1::XOnlyPublicKey::from_str(&raw_event_pubkey_hex).unwrap();
+    let event_pubkey = schnorr_to_normal_pub(raw_event_pubkey);
 
     // get iv and encrypted content from event
     let privkey = get_privkey();
@@ -97,6 +93,11 @@ pub fn get_pubkey() -> secp256k1::XOnlyPublicKey {
     return secp256k1::XOnlyPublicKey::from_keypair(&keypair);
 }
 
+fn schnorr_to_normal_pub(schnorr_pub: secp256k1::XOnlyPublicKey) -> secp256k1::PublicKey {
+    let schnorr_hex = format!("02{}", schnorr_pub.to_string());
+    return secp256k1::PublicKey::from_str(&schnorr_hex).unwrap();
+}
+
 fn separate_iv_ciphertext(encrypted_content: String) -> ([u8; 16], Vec<u8>) {
     let iv_position = encrypted_content.find("?iv=").unwrap();
     let encrypted_content_base64 = &encrypted_content[..iv_position];
@@ -112,12 +113,16 @@ fn separate_iv_ciphertext(encrypted_content: String) -> ([u8; 16], Vec<u8>) {
     return (iv_bytes, encrypted_content);
 }
 
-// todo: shared pubkey isn't needed anymore as a return value
 fn get_shared_key(
     sender_privkey: secp256k1::SecretKey,
     recipient_pub: secp256k1::PublicKey,
 ) -> secp256k1::SecretKey {
-    let shared_byte_array = secp256k1::ecdh::SharedSecret::new(&recipient_pub, &sender_privkey);
+    // without the hash, it doesn't work
+    let shared_byte_array =
+        secp256k1::ecdh::SharedSecret::new_with_hash(&recipient_pub, &sender_privkey, |x, _| {
+            x.into()
+        });
+
     let shared_privkey =
         SecretKey::from_slice(&shared_byte_array[..]).expect("32 bytes, within curve order");
 
@@ -134,13 +139,9 @@ fn encrypt_ecdh(shared_priv: secp256k1::SecretKey, content: &str) -> String {
     // encrypt content
 
     let iv_bytes: [u8; 16] = secp256k1::rand::random();
-
     let cipher =
         Aes256Cbc::new_from_slices(&shared_priv.serialize_secret()[..], &iv_bytes).unwrap();
     let ciphertext = cipher.encrypt_vec(content.as_bytes());
-
-    println!("{:?}", iv_bytes);
-    println!("{:?}", ciphertext);
     let ciphertext_string = format!(
         "{}?iv={}",
         base64::encode(ciphertext),
@@ -274,7 +275,6 @@ pub fn add_contact(name: String, contact_pubkey: String) {
 }
 
 pub fn change_contact_pubkey(name: String, contact_pubkey: String) {
-
     let res = fs::read_to_string("clust.json");
 
     if res.is_ok() {
