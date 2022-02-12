@@ -32,10 +32,10 @@ fn main() {
         let event = getter::get_event(args.subcommand);
         println!("{}", event);
     } else if args.command == "create-dm" {
-        let recipient_pub_hex = "ffb7e7b5a20bb1cf55a4b1d6ba610ddb97e84aa27708fdbb0b1e7e486fec1a50";
+        let recipient_pub_hex = util::contact_pubkey_from_name(args.subcommand).unwrap();
         println!(
             "{}",
-            util::create_dm_event(recipient_pub_hex, "helloworldhelloworldhelloworld")
+            util::create_dm_event(&recipient_pub_hex, &args.subcommand_2)
         );
     } else if args.command == "get-dm" {
         let pubkey_hex = util::get_pubkey().to_string();

@@ -287,3 +287,18 @@ pub fn change_contact_pubkey(name: String, contact_pubkey: String) {
         println!("Successfully changed contact pubkey");
     }
 }
+
+pub fn contact_pubkey_from_name(name: String) -> Option<String> {
+    let data = fs::read_to_string("clust.json").expect("Unable to read config file");
+    let json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
+    let contact_iter = json_data["contact"].as_array().unwrap().iter();
+
+    // check whether name exists
+    for (_, single_json) in contact_iter.enumerate() {
+        if single_json["name"] == name {
+            return Some(single_json["contact_pubkey"].as_str().unwrap().to_string());
+        }
+    }
+
+    return None;
+}
