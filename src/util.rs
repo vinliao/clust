@@ -307,3 +307,14 @@ pub fn to_payload(event: serde_json::Value) -> String {
     let payload = json!(["EVENT", event]);
     return payload.to_string()
 }
+
+pub fn to_request_payload(pubkey: String) -> String {
+    let filter = json!({
+        "kinds": [4],
+        "#p": [pubkey],
+    });
+
+    let payload = json!(["REQ", "foobar", filter]);
+
+    return payload.to_string();
+}

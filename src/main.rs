@@ -56,8 +56,9 @@ fn main() {
         util::change_contact_pubkey(args.subcommand, args.subcommand_2);
     } else if args.command == "chat" {
         // todo: get this value from config file instead
-        // todo: pass the contact name to the fn 
+        // todo: pass the contact name to the fn
         run("wss://nostr-pub.wellorder.net");
+        // run("ws://localhost:8080");
     }
 }
 
@@ -72,11 +73,13 @@ async fn run(connect_addr: &str) {
     println!("WebSocket handshake has been successfully completed");
 
     let (write, read) = ws_stream.split();
-
     let stdin_to_ws = stdin_rx.map(Ok).forward(write);
+
     let ws_to_stdout = {
         read.for_each(|message| async {
             let data = message.unwrap().into_data();
+            // data is the stuff from relay
+            // decrypt here
             tokio::io::stdout().write_all(&data).await.unwrap();
         })
     };
@@ -88,6 +91,12 @@ async fn run(connect_addr: &str) {
 // stdin stuff, modify input here
 async fn read_stdin(tx: futures_channel::mpsc::UnboundedSender<Message>) {
     let mut stdin = tokio::io::stdin();
+
+    // send initial payload before capturing stdin
+    let pubkey_hex = util::get_pubkey().to_string();
+    let initial_payload = util::to_request_payload(pubkey_hex);
+    tx.unbounded_send(Message::text(initial_payload)).unwrap();
+
     loop {
         let mut buf = vec![0; 1024];
         let n = match stdin.read(&mut buf).await {
