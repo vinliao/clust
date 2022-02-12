@@ -202,8 +202,8 @@ pub fn set_privkey(privkey: String) {
 
 pub fn generate_config() {
     let res = fs::read_to_string("clust.json");
-    
-    if res.is_err(){
+
+    if res.is_err() {
         // if config file doesn't exist
         let (privkey, _) = generate_key();
         let json_data = json!({
@@ -301,4 +301,9 @@ pub fn contact_pubkey_from_name(name: String) -> Option<String> {
     }
 
     return None;
+}
+
+pub fn to_payload(event: serde_json::Value) -> String {
+    let payload = json!(["EVENT", event]);
+    return payload.to_string()
 }

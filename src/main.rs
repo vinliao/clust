@@ -55,7 +55,9 @@ fn main() {
     } else if args.command == "change-contact-pubkey" {
         util::change_contact_pubkey(args.subcommand, args.subcommand_2);
     } else if args.command == "chat" {
-        run("ws://localhost:8080");
+        // todo: get this value from config file instead
+        // todo: pass the contact name to the fn 
+        run("wss://nostr-pub.wellorder.net");
     }
 }
 
@@ -95,10 +97,11 @@ async fn read_stdin(tx: futures_channel::mpsc::UnboundedSender<Message>) {
 
         buf.truncate(n);
         buf.pop(); // this is a newline, basically
-
         let message = String::from_utf8(buf).expect("Fail turning vec to string");
-        // turn to event here
+        let recipient_pub_hex = util::contact_pubkey_from_name("branle".to_string()).unwrap();
+        let event = util::create_dm_event(&recipient_pub_hex, &message);
+        let payload = util::to_payload(event);
 
-        tx.unbounded_send(Message::text(message)).unwrap();
+        tx.unbounded_send(Message::text(payload)).unwrap();
     }
 }
