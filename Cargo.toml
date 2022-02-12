@@ -18,3 +18,7 @@ block-modes = "0.8.1"
 aes = "0.7.5"
 base64 = "0.13.0"
 rand = "0.8.4"
+tokio-tungstenite = {version="*", features=["native-tls"]}
+tokio = { version = "1.16.1", features = ["full"] }
+futures-util = "0.3.21"
+futures-channel = "0.3.21"
