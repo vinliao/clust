@@ -191,122 +191,99 @@ fn get_privkey() -> secp256k1::SecretKey {
     return SecretKey::from_str(privkey_hex_raw).unwrap();
 }
 
+// todo: all these fs-related stuff needs massive refactor
 pub fn set_privkey(privkey: String) {
-    let res = fs::read_to_string("clust.json");
-
-    if res.is_ok() {
-        // if config file exist
-        let data = res.unwrap();
-        let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
-
-        json_data["main_privkey"] = serde_json::Value::String(privkey);
-        fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
-    } else {
-        // if config file doesn't exist
-        let json_data = json!({ "privkey": privkey });
-        fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
-    }
-
+    let data = fs::read_to_string("clust.json").expect("Unable to read config file");
+    let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
+    json_data["main_privkey"] = serde_json::Value::String(privkey);
+    fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
     println!("Private key updated");
 }
 
 pub fn generate_config() {
     let res = fs::read_to_string("clust.json");
-
-    if res.is_err() {
-        // if file doesn't exist
+    
+    if res.is_err(){
+        // if config file doesn't exist
         let (privkey, _) = generate_key();
         let json_data = json!({
             "main_privkey": privkey.display_secret().to_string(),
             "relay": [],
             "contact": []
         });
-
         fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
+        println!("Config file created");
     } else {
-        println!("Config file exists!");
+        println!("Config file exists, not doing anything");
     }
 }
 
-// todo: this and change_contact_pubkey can return Result (enum)
+// todo: two function below can be refactored further
 pub fn add_contact(name: String, contact_pubkey: String) {
-    let res = fs::read_to_string("clust.json");
+    let data = fs::read_to_string("clust.json").expect("Unable to read config file");
+    let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
+    let contact_iter = json_data["contact"].as_array().unwrap().iter();
 
-    if res.is_ok() {
-        // if config file exist
-
-        let data = res.unwrap();
-        let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
-        let contact_json = json_data["contact"].as_array().unwrap();
-
-        // check whether name exists
-        let mut name_index = usize::MAX;
-        for (index, single_json) in contact_json.iter().enumerate() {
-            if single_json["name"] == name {
-                name_index = index;
-            }
+    // check whether name exists
+    let mut name_index = usize::MAX;
+    for (index, single_json) in contact_iter.enumerate() {
+        if single_json["name"] == name {
+            name_index = index;
         }
+    }
 
-        if name_index == usize::MAX {
-            // if contact name doesn't exist
+    if name_index == usize::MAX {
+        // if contact name doesn't exist
+        let new_contact = json!({
+            "name": name,
+            "contact_pubkey": contact_pubkey,
+        });
 
-            let new_contact = json!({
-                "name": name,
-                "contact_pubkey": contact_pubkey,
-            });
+        json_data["contact"]
+            .as_array_mut()
+            .unwrap()
+            .push(new_contact);
 
-            json_data["contact"]
-                .as_array_mut()
-                .unwrap()
-                .push(new_contact);
-            fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
-        } else {
-            // if contact name exist, don't do anything
-            println!("Contact name already exist, pick another name!")
-        }
+        fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
+        println!("Successfully added contact");
     } else {
-        // if config file doesn't exist
-        println!("Config file doesn't exist!")
+        // if contact name exist, don't do anything
+        println!("Contact name exists, pick another name");
     }
 }
 
 pub fn change_contact_pubkey(name: String, contact_pubkey: String) {
-    let res = fs::read_to_string("clust.json");
+    let data = fs::read_to_string("clust.json").expect("Unable to read config file");
+    let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
+    let contact_iter = json_data["contact"].as_array().unwrap().iter();
 
-    if res.is_ok() {
-        // if config file exist
-        let data = res.unwrap();
-        let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
-        let contact_json = json_data["contact"].as_array().unwrap();
-
-        // check whether name exists
-        let mut name_index = usize::MAX;
-        for (index, single_json) in contact_json.iter().enumerate() {
-            if single_json["name"] == name {
-                name_index = index;
-            }
+    // check whether name exists
+    let mut name_index = usize::MAX;
+    for (index, single_json) in contact_iter.enumerate() {
+        if single_json["name"] == name {
+            name_index = index;
         }
+    }
 
-        if name_index == usize::MAX {
-            // if contact name doesn't exists
-            println!("Contact name doens't exist, add contact first!");
-        } else {
-            // if contact name exists, change contact pubkey
-            let mut changed_contact_json = json_data["contact"][name_index].clone();
-            changed_contact_json["contact_pubkey"] = serde_json::Value::String(contact_pubkey);
-            json_data["contact"]
-                .as_array_mut()
-                .unwrap()
-                .remove(name_index);
-            json_data["contact"]
-                .as_array_mut()
-                .unwrap()
-                .push(changed_contact_json);
-
-            fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
-        }
+    if name_index == usize::MAX {
+        // if contact name doesn't exists
+        println!("Contact name doens't exist, add contact first!");
     } else {
-        // if config file doesn't exist
-        println!("Config file doesn't exist!")
+        // if contact name exists, change contact pubkey
+        let mut changed_contact_json = json_data["contact"][name_index].clone();
+        changed_contact_json["contact_pubkey"] = serde_json::Value::String(contact_pubkey);
+
+        json_data["contact"]
+            .as_array_mut()
+            .unwrap()
+            .remove(name_index);
+
+        json_data["contact"]
+            .as_array_mut()
+            .unwrap()
+            .push(changed_contact_json);
+
+        fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
+        println!("Successfully changed contact pubkey");
     }
 }
