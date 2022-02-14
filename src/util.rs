@@ -54,7 +54,6 @@ pub fn create_dm_event(recipient_pub_hex: &str, message: &str) -> serde_json::Va
     let event_id_byte = hex::decode(event_id_hex.clone()).unwrap();
     let event_id_message =
         Message::from_slice(&event_id_byte[..]).expect("32 bytes, within curve order");
-    // sign from throwaway keypair
     let sig = secp.sign_schnorr(&event_id_message, &sender_keypair);
 
     let event = json!({
@@ -70,15 +69,7 @@ pub fn create_dm_event(recipient_pub_hex: &str, message: &str) -> serde_json::Va
     return event;
 }
 
-pub fn decrypt_dm(event: serde_json::Value) -> String {
-    // extract pubkey from event
-    let raw_event_pubkey_hex = event["pubkey"].as_str().unwrap().to_string();
-    let raw_event_pubkey = secp256k1::XOnlyPublicKey::from_str(&raw_event_pubkey_hex).unwrap();
-    let event_pubkey = schnorr_to_normal_pub(raw_event_pubkey);
-
-    // get iv and encrypted content from event
-    let privkey = get_privkey();
-    let shared_privkey = get_shared_key(privkey, event_pubkey);
+pub fn decrypt_dm(event: serde_json::Value, shared_privkey: secp256k1::SecretKey) -> String {
     let content = event["content"].as_str().unwrap().to_string();
     let (iv_bytes, encrypted_content) = separate_iv_ciphertext(content);
 
@@ -127,6 +118,13 @@ fn get_shared_key(
         SecretKey::from_slice(&shared_byte_array[..]).expect("32 bytes, within curve order");
 
     return shared_privkey;
+}
+
+pub fn get_shared_key_from_hex(recipient_pub_hex: &str) -> secp256k1::SecretKey {
+    let recipient_schnorr = secp256k1::XOnlyPublicKey::from_str(recipient_pub_hex).unwrap();
+    let recipient_pub = schnorr_to_normal_pub(recipient_schnorr);
+
+    return get_shared_key(get_privkey(), recipient_pub);
 }
 
 fn get_schnorr_pub(privkey: secp256k1::SecretKey) -> secp256k1::XOnlyPublicKey {
@@ -288,7 +286,7 @@ pub fn change_contact_pubkey(name: String, contact_pubkey: String) {
     }
 }
 
-pub fn contact_pubkey_from_name(name: String) -> Option<String> {
+pub fn contact_pubkey_from_name(name: &str) -> Option<String> {
     let data = fs::read_to_string("clust.json").expect("Unable to read config file");
     let json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
     let contact_iter = json_data["contact"].as_array().unwrap().iter();
@@ -305,13 +303,13 @@ pub fn contact_pubkey_from_name(name: String) -> Option<String> {
 
 pub fn to_payload(event: serde_json::Value) -> String {
     let payload = json!(["EVENT", event]);
-    return payload.to_string()
+    return payload.to_string();
 }
 
-pub fn to_request_payload(pubkey: String) -> String {
+pub fn to_dm_request_payload(pubkey: &str, recipient_pubkey: &str) -> String {
     let filter = json!({
         "kinds": [4],
-        "#p": [pubkey],
+        "#p": [pubkey, recipient_pubkey],
     });
 
     let payload = json!(["REQ", "foobar", filter]);

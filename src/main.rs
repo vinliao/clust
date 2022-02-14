@@ -38,7 +38,7 @@ fn main() {
         let event = getter::get_event(args.subcommand);
         println!("{}", event);
     } else if args.command == "create-dm" {
-        let recipient_pub_hex = util::contact_pubkey_from_name(args.subcommand).unwrap();
+        let recipient_pub_hex = util::contact_pubkey_from_name(&args.subcommand).unwrap();
         println!(
             "{}",
             util::create_dm_event(&recipient_pub_hex, &args.subcommand_2)
@@ -48,8 +48,8 @@ fn main() {
         let raw_string = getter::get_dm(pubkey_hex);
         let payload: serde_json::Value = serde_json::from_str(&raw_string).unwrap();
         println!("{}", payload);
-        let dm = util::decrypt_dm(payload[2].clone());
-        println!("{}", dm);
+        // let dm = util::decrypt_dm(payload[2].clone());
+        // println!("{}", dm);
     } else if args.command == "add-contact" {
         util::add_contact(args.subcommand, args.subcommand_2);
     } else if args.command == "change-contact-pubkey" {
@@ -63,7 +63,7 @@ fn main() {
 }
 
 #[tokio::main]
-async fn run(connect_addr: &str, name: &str) {
+async fn run(connect_addr: &str, contact_name: &str) {
     let url = url::Url::parse(connect_addr).unwrap();
 
     let (stdin_tx, stdin_rx) = futures_channel::mpsc::unbounded();
@@ -75,16 +75,28 @@ async fn run(connect_addr: &str, name: &str) {
     let (write, read) = ws_stream.split();
     let stdin_to_ws = stdin_rx.map(Ok).forward(write);
 
+    // get shared key here...
+    let recipient_pubkey_hex = util::contact_pubkey_from_name(contact_name).unwrap();
+    let shared_key = util::get_shared_key_from_hex(&recipient_pubkey_hex);
+
     let ws_to_stdout = {
         read.for_each(|message| async {
             // data is the stuff from relay, decrypt here
+
             let data = message.unwrap().into_data();
             let data_string = String::from_utf8(data).unwrap();
             let payload: serde_json::Value = serde_json::from_str(&data_string).unwrap();
             let event = payload[2].clone();
 
-            let dm = util::decrypt_dm(event);
-            println!("{}: {}", name, dm);
+            // if identity from others, display "name: "
+            // otherwise, display "you: "
+            let dm = util::decrypt_dm(event.clone(), shared_key);
+
+            if event["pubkey"].as_str().unwrap().to_string() == recipient_pubkey_hex {
+                println!("{}: {}", contact_name, dm);
+            } else {
+                println!("you: {}", dm);
+            }
 
             // below is the official way to do it, but it prints out nothing
             // let vec = dm.as_bytes();
@@ -102,7 +114,10 @@ async fn read_stdin(tx: futures_channel::mpsc::UnboundedSender<Message>) {
 
     // send initial payload before capturing stdin
     let pubkey_hex = util::get_pubkey().to_string();
-    let initial_payload = util::to_request_payload(pubkey_hex);
+    // apparently passing a value as params to async function is hard
+    let recipient_pub_hex =
+        util::contact_pubkey_from_name("branle").expect("Fail to get contact's pubkey");
+    let initial_payload = util::to_dm_request_payload(&pubkey_hex, &recipient_pub_hex);
     tx.unbounded_send(Message::text(initial_payload)).unwrap();
 
     loop {
@@ -115,7 +130,7 @@ async fn read_stdin(tx: futures_channel::mpsc::UnboundedSender<Message>) {
         buf.truncate(n);
         buf.pop(); // this is a newline, basically
         let message = String::from_utf8(buf).expect("Fail turning vec to string");
-        let recipient_pub_hex = util::contact_pubkey_from_name("branle".to_string()).unwrap();
+        let recipient_pub_hex = util::contact_pubkey_from_name("branle").unwrap();
         let event = util::create_dm_event(&recipient_pub_hex, &message);
         let payload = util::to_payload(event);
 
