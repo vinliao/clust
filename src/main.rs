@@ -57,13 +57,13 @@ fn main() {
     } else if args.command == "chat" {
         // todo: get this value from config file instead
         // todo: pass the contact name to the fn
-        run("wss://nostr-pub.wellorder.net");
+        run("wss://nostr-pub.wellorder.net", &args.subcommand);
         // run("ws://localhost:8080");
     }
 }
 
 #[tokio::main]
-async fn run(connect_addr: &str) {
+async fn run(connect_addr: &str, name: &str) {
     let url = url::Url::parse(connect_addr).unwrap();
 
     let (stdin_tx, stdin_rx) = futures_channel::mpsc::unbounded();
@@ -77,10 +77,18 @@ async fn run(connect_addr: &str) {
 
     let ws_to_stdout = {
         read.for_each(|message| async {
+            // data is the stuff from relay, decrypt here
             let data = message.unwrap().into_data();
-            // data is the stuff from relay
-            // decrypt here
-            tokio::io::stdout().write_all(&data).await.unwrap();
+            let data_string = String::from_utf8(data).unwrap();
+            let payload: serde_json::Value = serde_json::from_str(&data_string).unwrap();
+            let event = payload[2].clone();
+
+            let dm = util::decrypt_dm(event);
+            println!("{}: {}", name, dm);
+
+            // below is the official way to do it, but it prints out nothing
+            // let vec = dm.as_bytes();
+            // tokio::io::stdout().write_all(&vec).await.unwrap();
         })
     };
 
