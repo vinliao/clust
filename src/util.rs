@@ -25,8 +25,41 @@ pub fn generate_key() -> (secp256k1::SecretKey, secp256k1::XOnlyPublicKey) {
     return (privkey, pubkey);
 }
 
+fn create_empty_event() -> serde_json::Value {
+    // create empty nip-01 event to announce pubkey
+
+    let secp = Secp256k1::new();
+
+    let sender_privkey = get_privkey();
+    let sender_pubkey = get_schnorr_pub(sender_privkey);
+    let sender_keypair = secp256k1::KeyPair::from_secret_key(&secp, sender_privkey);
+
+    // create data
+    let time = Local::now();
+    let unix_time = time.timestamp();
+    let event_id_hex = get_event_id(&sender_pubkey.to_string(), "", unix_time, 1, json!([]));
+
+    // sign id
+    let event_id_byte = hex::decode(event_id_hex.clone()).unwrap();
+    let event_id_message =
+        Message::from_slice(&event_id_byte[..]).expect("32 bytes, within curve order");
+    let sig = secp.sign_schnorr(&event_id_message, &sender_keypair);
+
+    let event = json!({
+        "id": event_id_hex,
+        "pubkey": sender_pubkey.to_string(),
+        "created_at": unix_time,
+        "kind": 1,
+        "tags": [],
+        "content": "",
+        "sig": sig.to_string()
+    });
+
+    return event;
+}
+
 pub fn create_dm_event(recipient_pub_hex: &str, message: &str) -> serde_json::Value {
-    // create dm event to a pubkey with random key
+    // create nip-04 dm event
 
     let secp = Secp256k1::new();
 
@@ -43,8 +76,8 @@ pub fn create_dm_event(recipient_pub_hex: &str, message: &str) -> serde_json::Va
     let unix_time = time.timestamp();
     let encrypted_message = encrypt_ecdh(shared_priv, message);
     let event_id_hex = get_event_id(
-        sender_pubkey.to_string(),
-        encrypted_message.clone(),
+        &sender_pubkey.to_string(),
+        &encrypted_message.clone(),
         unix_time,
         4,
         json!([["p", recipient_pub_hex]]),
@@ -62,6 +95,109 @@ pub fn create_dm_event(recipient_pub_hex: &str, message: &str) -> serde_json::Va
         "created_at": unix_time,
         "kind": 4,
         "tags": [["p", recipient_pub_hex]],
+        "content": encrypted_message,
+        "sig": sig.to_string()
+    });
+
+    return event;
+}
+
+pub fn create_handshake_event(recipient_pub_hex: &str) -> serde_json::Value {
+    // announce sender's pubkey to recipient with throwaway keypair
+    let secp = Secp256k1::new();
+
+    let (throwaway_privkey, throwaway_pubkey) = generate_key();
+    let throwaway_keypair = secp256k1::KeyPair::from_secret_key(&secp, throwaway_privkey);
+
+    let recipient_schnorr_pub = secp256k1::XOnlyPublicKey::from_str(recipient_pub_hex).unwrap();
+    let recipient_normal_pub = schnorr_to_normal_pub(recipient_schnorr_pub);
+    let shared_priv = get_shared_key(throwaway_privkey, recipient_normal_pub);
+
+    // create data
+    let time = Local::now();
+    let unix_time = time.timestamp();
+    let encrypted_message = encrypt_ecdh(shared_priv, &create_empty_event().to_string());
+    let event_id_hex = get_event_id(
+        &throwaway_pubkey.to_string(),
+        &encrypted_message.clone(),
+        unix_time,
+        4,
+        json!([["p", recipient_pub_hex]]),
+    );
+
+    // sign id
+    let event_id_byte = hex::decode(event_id_hex.clone()).unwrap();
+    let event_id_message =
+        Message::from_slice(&event_id_byte[..]).expect("32 bytes, within curve order");
+    // sign from throwaway keypair
+    let sig = secp.sign_schnorr(&event_id_message, &throwaway_keypair);
+
+    let event = json!({
+        "id": event_id_hex,
+        "pubkey": throwaway_pubkey.to_string(),
+        "created_at": unix_time,
+        "kind": 4,
+        "tags": [["p", recipient_pub_hex]],
+        "content": encrypted_message,
+        "sig": sig.to_string()
+    });
+
+    return event;
+
+}
+
+pub fn create_shared_dm_event(recipient_pub_hex: &str, message: &str) -> serde_json::Value {
+    // create event, signed with public inbox
+    // event is encrypted message between both parties
+    // the identifier is sha256 of shared key
+    // both have shared key once one party sends handshake event
+
+    let secp = Secp256k1::new();
+
+    // use config json to do this
+    let inbox_privkey_hex = "13bad4c07bdea3a3397e7f52824d77c8a01b8edcc328f0ca5dd8e2540df5efb5";
+    let inbox_privkey = secp256k1::SecretKey::from_str(inbox_privkey_hex).unwrap();
+    let inbox_keypair = secp256k1::KeyPair::from_secret_key(&secp, inbox_privkey);
+    let inbox_pubkey = secp256k1::XOnlyPublicKey::from_keypair(&inbox_keypair);
+
+    let sender_privkey = get_privkey();
+    let sender_pubkey = get_schnorr_pub(sender_privkey);
+    let sender_keypair = secp256k1::KeyPair::from_secret_key(&secp, sender_privkey);
+
+    let recipient_schnorr = secp256k1::XOnlyPublicKey::from_str(recipient_pub_hex).unwrap();
+    let recipient_pub = schnorr_to_normal_pub(recipient_schnorr);
+    let shared_priv = get_shared_key(sender_privkey, recipient_pub);
+
+    // hash shared_priv
+    let mut hasher = Sha256::new();
+    hasher.update(shared_priv.display_secret().to_string());
+    let sha_shared_priv_byte = hasher.finalize();
+    let sha_shared_priv_hex = hex::encode(sha_shared_priv_byte);
+
+    // create data with inbox public key and shared sha
+    let time = Local::now();
+    let unix_time = time.timestamp();
+    let encrypted_message = encrypt_ecdh(shared_priv, message);
+    let event_id_hex = get_event_id(
+        &inbox_pubkey.to_string(),
+        &encrypted_message.clone(),
+        unix_time,
+        4,
+        json!([["shared", sha_shared_priv_hex]]),
+    );
+
+    // sign id
+    let event_id_byte = hex::decode(event_id_hex.clone()).unwrap();
+    let event_id_message =
+        Message::from_slice(&event_id_byte[..]).expect("32 bytes, within curve order");
+    let sig = secp.sign_schnorr(&event_id_message, &inbox_keypair);
+
+    let event = json!({
+        "id": event_id_hex,
+        "pubkey": inbox_pubkey.to_string(),
+        "created_at": unix_time,
+        "kind": 4,
+        "tags": [["shared", sha_shared_priv_hex]],
         "content": encrypted_message,
         "sig": sig.to_string()
     });
@@ -165,8 +301,8 @@ fn decrypt_ecdh(
 }
 
 fn get_event_id(
-    pubkey: String,
-    content: String,
+    pubkey: &str,
+    content: &str,
     unix_time: i64,
     kind: u32,
     tags: serde_json::Value,

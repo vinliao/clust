@@ -59,6 +59,10 @@ fn main() {
         // todo: pass the contact name to the fn
         run("wss://nostr-pub.wellorder.net", &args.subcommand);
         // run("ws://localhost:8080");
+    } else if args.command == "test" {
+        
+        let event = util::create_shared_dm_event("77eb0e03bfe1922c2d5ca9a21a5d6382e3eb4321bb542c04c1bf4d167e28dc2c", "hi");
+        println!("{}", event);
     }
 }
 
