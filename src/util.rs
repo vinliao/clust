@@ -222,6 +222,22 @@ pub fn get_pubkey() -> secp256k1::XOnlyPublicKey {
     return secp256k1::XOnlyPublicKey::from_keypair(&keypair);
 }
 
+pub fn verify_event(event: serde_json::Value) {
+    let secp = Secp256k1::new();
+
+    let pubkey_hex = event["pubkey"].as_str().unwrap();
+    let event_id_hex = event["id"].as_str().unwrap();
+    let event_id_byte = hex::decode(event_id_hex).unwrap();
+    let sig_hex = event["sig"].as_str().unwrap();
+
+    let pubkey = secp256k1::XOnlyPublicKey::from_str(pubkey_hex).unwrap();
+    let event_id = secp256k1::Message::from_slice(&event_id_byte[..]).unwrap();
+    let sig = secp256k1::schnorr::Signature::from_str(sig_hex).unwrap();
+
+    secp.verify_schnorr(&sig, &event_id, &pubkey).expect("Fail to unverify event");
+    println!("Event valid");
+}
+
 fn schnorr_to_normal_pub(schnorr_pub: secp256k1::XOnlyPublicKey) -> secp256k1::PublicKey {
     let schnorr_hex = format!("02{}", schnorr_pub.to_string());
     return secp256k1::PublicKey::from_str(&schnorr_hex).unwrap();

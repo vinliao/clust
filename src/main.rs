@@ -63,6 +63,8 @@ fn main() {
         
         let event = util::create_public_dm_event("77eb0e03bfe1922c2d5ca9a21a5d6382e3eb4321bb542c04c1bf4d167e28dc2c", "hi");
         println!("{}", event);
+        util::verify_event(event);
+
     } else if args.command == "announce-pubkey" {
         
         let event = util::create_announcement_event("77eb0e03bfe1922c2d5ca9a21a5d6382e3eb4321bb542c04c1bf4d167e28dc2c");
