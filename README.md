@@ -3,6 +3,7 @@ This is very unstable and experimental. It's best to not use your "real identity
 
 APIs:
 - [ ] `clust chat <name>`
+- [ ] `clust inbox`
 
 Low-level APIs:
 - [x] `clust init`
@@ -10,8 +11,8 @@ Low-level APIs:
 - [x] `clust set-private <key>`
 - [x] `clust publish-raw <event>`
 - [x] `clust get-event <id>`
-- [x] `clust get-dm <pubkey>`
 - [x] `clust add-contact <name> <pubkey>`
+- [ ] `clust delete-contact <name>`
 - [x] `clust change-contact-pubkey <name> <pubkey>`
 
 Backend to-do:
