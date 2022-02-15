@@ -177,6 +177,8 @@ pub fn create_public_dm_event(recipient_pub_hex: &str, message: &str) -> serde_j
     let unix_time = time.timestamp();
 
     // envelope the real nip-04 dm with another dm
+    // the purpose of enveloping is to know who sends what message
+    // between two parties when chatting
     let inner_encrypted_message = create_dm_event(recipient_pub_hex, message);
     let encrypted_message = encrypt_ecdh(shared_priv, &inner_encrypted_message.to_string());
 
@@ -279,6 +281,18 @@ pub fn get_shared_key_from_hex(recipient_pub_hex: &str) -> secp256k1::SecretKey 
     let recipient_pub = schnorr_to_normal_pub(recipient_schnorr);
 
     return get_shared_key(get_privkey(), recipient_pub);
+}
+
+pub fn get_sha_shared_key(recipient_pub_hex: &str) -> String {
+    let recipient_schnorr = secp256k1::XOnlyPublicKey::from_str(recipient_pub_hex).unwrap();
+    let recipient_pub = schnorr_to_normal_pub(recipient_schnorr);
+    let shared_priv = get_shared_key(get_privkey(), recipient_pub);
+
+    // hash shared_priv
+    let mut hasher = Sha256::new();
+    hasher.update(shared_priv.display_secret().to_string());
+    let sha_shared_priv_byte = hasher.finalize();
+    return hex::encode(sha_shared_priv_byte);
 }
 
 fn get_schnorr_pub(privkey: secp256k1::SecretKey) -> secp256k1::XOnlyPublicKey {
@@ -460,10 +474,10 @@ pub fn to_payload(event: serde_json::Value) -> String {
     return payload.to_string();
 }
 
-pub fn to_dm_request_payload(pubkey: &str, recipient_pubkey: &str) -> String {
+pub fn to_public_dm_request(shared_sha: &str) -> String {
     let filter = json!({
         "kinds": [4],
-        "#p": [pubkey, recipient_pubkey],
+        "#shared": [shared_sha],
     });
 
     let payload = json!(["REQ", "foobar", filter]);

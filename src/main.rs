@@ -59,15 +59,14 @@ fn main() {
         // todo: pass the contact name to the fn
         run("wss://nostr-pub.wellorder.net", &args.subcommand);
         // run("ws://localhost:8080");
-    } else if args.command == "test" {
-        
-        let event = util::create_public_dm_event("77eb0e03bfe1922c2d5ca9a21a5d6382e3eb4321bb542c04c1bf4d167e28dc2c", "hi");
-        println!("{}", event);
-        util::verify_event(event);
-
-    } else if args.command == "announce-pubkey" {
-        
-        let event = util::create_announcement_event("77eb0e03bfe1922c2d5ca9a21a5d6382e3eb4321bb542c04c1bf4d167e28dc2c");
+    } else if args.command == "announce" {
+        let recipient_pub_hex = util::contact_pubkey_from_name(&args.subcommand).unwrap();
+        let event = util::create_announcement_event(&recipient_pub_hex);
+        publisher::publish(event);
+    } else if args.command == "dm" {
+        // this function is wrong, use name for input instead of pubkey
+        let recipient_pub_hex = util::contact_pubkey_from_name(&args.subcommand).unwrap();
+        let event = util::create_public_dm_event(&recipient_pub_hex, &args.subcommand_2);
         println!("{}", event);
     }
 }
@@ -100,13 +99,9 @@ async fn run(connect_addr: &str, contact_name: &str) {
 
             // if identity from others, display "name: "
             // otherwise, display "you: "
-            let dm = util::decrypt_dm(event.clone(), shared_key);
-
-            if event["pubkey"].as_str().unwrap().to_string() == recipient_pubkey_hex {
-                println!("{}: {}", contact_name, dm);
-            } else {
-                println!("you: {}", dm);
-            }
+            let inner_dm = util::decrypt_dm(event, shared_key);
+            let dm = util::decrypt_dm(serde_json::from_str(&inner_dm).unwrap(), shared_key);
+            println!("{}", dm);
 
             // below is the official way to do it, but it prints out nothing
             // let vec = dm.as_bytes();
@@ -123,11 +118,12 @@ async fn read_stdin(tx: futures_channel::mpsc::UnboundedSender<Message>) {
     let mut stdin = tokio::io::stdin();
 
     // send initial payload before capturing stdin
-    let pubkey_hex = util::get_pubkey().to_string();
-    // apparently passing a value as params to async function is hard
     let recipient_pub_hex =
         util::contact_pubkey_from_name("branle").expect("Fail to get contact's pubkey");
-    let initial_payload = util::to_dm_request_payload(&pubkey_hex, &recipient_pub_hex);
+
+    let shared_sha = util::get_sha_shared_key(&recipient_pub_hex);
+    let initial_payload = util::to_public_dm_request(&shared_sha);
+    println!("{}", initial_payload);
     tx.unbounded_send(Message::text(initial_payload)).unwrap();
 
     loop {
@@ -141,7 +137,7 @@ async fn read_stdin(tx: futures_channel::mpsc::UnboundedSender<Message>) {
         buf.pop(); // this is a newline, basically
         let message = String::from_utf8(buf).expect("Fail turning vec to string");
         let recipient_pub_hex = util::contact_pubkey_from_name("branle").unwrap();
-        let event = util::create_dm_event(&recipient_pub_hex, &message);
+        let event = util::create_public_dm_event(&recipient_pub_hex, &message);
         let payload = util::to_payload(event);
 
         tx.unbounded_send(Message::text(payload)).unwrap();
