@@ -102,7 +102,7 @@ pub fn create_dm_event(recipient_pub_hex: &str, message: &str) -> serde_json::Va
     return event;
 }
 
-pub fn create_handshake_event(recipient_pub_hex: &str) -> serde_json::Value {
+pub fn create_announcement_event(recipient_pub_hex: &str) -> serde_json::Value {
     // announce sender's pubkey to recipient with throwaway keypair
     let secp = Secp256k1::new();
 
@@ -146,11 +146,11 @@ pub fn create_handshake_event(recipient_pub_hex: &str) -> serde_json::Value {
 
 }
 
-pub fn create_shared_dm_event(recipient_pub_hex: &str, message: &str) -> serde_json::Value {
+pub fn create_public_dm_event(recipient_pub_hex: &str, message: &str) -> serde_json::Value {
     // create event, signed with public inbox
     // event is encrypted message between both parties
     // the identifier is sha256 of shared key
-    // both have shared key once one party sends handshake event
+    // both have shared key once one party sends announcement event
 
     let secp = Secp256k1::new();
 
@@ -161,8 +161,6 @@ pub fn create_shared_dm_event(recipient_pub_hex: &str, message: &str) -> serde_j
     let inbox_pubkey = secp256k1::XOnlyPublicKey::from_keypair(&inbox_keypair);
 
     let sender_privkey = get_privkey();
-    let sender_pubkey = get_schnorr_pub(sender_privkey);
-    let sender_keypair = secp256k1::KeyPair::from_secret_key(&secp, sender_privkey);
 
     let recipient_schnorr = secp256k1::XOnlyPublicKey::from_str(recipient_pub_hex).unwrap();
     let recipient_pub = schnorr_to_normal_pub(recipient_schnorr);
@@ -177,7 +175,11 @@ pub fn create_shared_dm_event(recipient_pub_hex: &str, message: &str) -> serde_j
     // create data with inbox public key and shared sha
     let time = Local::now();
     let unix_time = time.timestamp();
-    let encrypted_message = encrypt_ecdh(shared_priv, message);
+
+    // envelope the real nip-04 dm with another dm
+    let inner_encrypted_message = create_dm_event(recipient_pub_hex, message);
+    let encrypted_message = encrypt_ecdh(shared_priv, &inner_encrypted_message.to_string());
+
     let event_id_hex = get_event_id(
         &inbox_pubkey.to_string(),
         &encrypted_message.clone(),
