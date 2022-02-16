@@ -215,14 +215,6 @@ pub fn decrypt_dm(event: serde_json::Value, shared_privkey: secp256k1::SecretKey
     return decrypt_ecdh(shared_privkey, iv_bytes, encrypted_content);
 }
 
-// for external use
-pub fn get_pubkey() -> secp256k1::XOnlyPublicKey {
-    let secp = Secp256k1::new();
-    let privkey = get_privkey();
-    let keypair = secp256k1::KeyPair::from_secret_key(&secp, privkey);
-    return secp256k1::XOnlyPublicKey::from_keypair(&keypair);
-}
-
 pub fn verify_event(event: serde_json::Value) {
     let secp = Secp256k1::new();
 
@@ -418,6 +410,13 @@ pub fn add_contact(name: &str, contact_pubkey: &str) {
         // if contact name exist, don't do anything
         println!("Contact name exists, pick another name");
     }
+}
+
+pub fn get_pubkey() -> secp256k1::XOnlyPublicKey {
+    let secp = Secp256k1::new();
+    let privkey = get_privkey();
+    let keypair = secp256k1::KeyPair::from_secret_key(&secp, privkey);
+    return secp256k1::XOnlyPublicKey::from_keypair(&keypair);
 }
 
 pub fn change_contact_pubkey(name: String, contact_pubkey: String) {

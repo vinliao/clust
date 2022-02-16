@@ -4,7 +4,7 @@ mod publisher;
 mod util;
 use futures_channel;
 use futures_util::{future, pin_mut, StreamExt};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::AsyncReadExt;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use url;
 
@@ -65,13 +65,14 @@ fn main() {
         run("wss://nostr-pub.wellorder.net", &args.subcommand);
         // run("ws://localhost:8080");
     } else if args.command == "announce" {
-        let recipient_pub_hex = util::contact_pubkey_from_name(&args.subcommand).unwrap();
         let event = util::create_announcement_event(&args.subcommand);
         publisher::publish(event);
     } else if args.command == "inbox" {
         // this pulls all the nip-04 event and input it as contact list
         // this consumes what `clust announce` puts out
         add_new_contact();
+    } else if args.command == "get-pubkey" {
+        println!("Pubkey: {}", util::get_pubkey().to_string());
     }
 }
 
@@ -118,7 +119,10 @@ async fn run(connect_addr: &str, contact_name: &str) {
 }
 
 // stdin stuff, modify input here
-async fn read_stdin(tx: futures_channel::mpsc::UnboundedSender<Message>, recipient_pub_hex: String) {
+async fn read_stdin(
+    tx: futures_channel::mpsc::UnboundedSender<Message>,
+    recipient_pub_hex: String,
+) {
     let mut stdin = tokio::io::stdin();
 
     // send initial payload before capturing stdin
@@ -167,7 +171,9 @@ fn add_new_contact() {
         println!("* {}", header);
     }
 
-    socket.write_message(Message::Text(payload.to_string())).unwrap();
+    socket
+        .write_message(Message::Text(payload.to_string()))
+        .unwrap();
 
     loop {
         let msg = socket.read_message().expect("Error reading message");
@@ -180,13 +186,20 @@ fn add_new_contact() {
         let throwaway_shared_key = util::get_shared_key_from_hex(throwaway_pubkey);
         let inner_event_str = util::decrypt_dm(event, throwaway_shared_key);
         let inner_event: serde_json::Value = serde_json::from_str(&inner_event_str).unwrap();
-        
+
+        util::verify_event(inner_event.clone());
         // get pubkey from inner event
         let contact_pubkey = inner_event["pubkey"].as_str().unwrap();
         util::add_contact(contact_pubkey.clone(), contact_pubkey);
         println!("Contact added: {}", contact_pubkey);
-        println!("You can assign name to it by running `clust run change-contact-name {} <name>`", contact_pubkey);
-        println!("You can chat now by running `clust run chat {}`", contact_pubkey);
+        println!(
+            "You can assign name to it by running `clust run change-contact-name {} <name>`",
+            contact_pubkey
+        );
+        println!(
+            "You can chat now by running `clust run chat {}`",
+            contact_pubkey
+        );
 
         // println!("{}", event);
     }
