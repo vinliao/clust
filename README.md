@@ -4,7 +4,7 @@ Encrypted chat inside Nostr leaks metadata of who talks to who. This small CLI a
 The basic idea is this:
 1. Alice announces her pubkey to Bob
 2. Both have each other's pubkey, both can derive shared key from it 
-3. They both post message to "public inbox" with sha256(shared_key) on its tag
+3. They both post message to "public inbox" with `sha256(shared_key)` on its tag
 4. With the shared key, only both can create the private event, only both can decrypt
 5. Nobody knows who is messaging who since there's no pubkey on the event
 6. If an attacker tampers with the event, either the event's signature becomes invalid or the content can't be decrypted by Alice or Bob (which they can ignore)
