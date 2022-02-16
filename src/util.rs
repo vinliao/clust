@@ -143,7 +143,6 @@ pub fn create_announcement_event(recipient_pub_hex: &str) -> serde_json::Value {
     });
 
     return event;
-
 }
 
 pub fn create_public_dm_event(recipient_pub_hex: &str, message: &str) -> serde_json::Value {
@@ -236,7 +235,8 @@ pub fn verify_event(event: serde_json::Value) {
     let event_id = secp256k1::Message::from_slice(&event_id_byte[..]).unwrap();
     let sig = secp256k1::schnorr::Signature::from_str(sig_hex).unwrap();
 
-    secp.verify_schnorr(&sig, &event_id, &pubkey).expect("Fail to unverify event");
+    secp.verify_schnorr(&sig, &event_id, &pubkey)
+        .expect("Fail to unverify event");
     println!("Event valid");
 }
 
@@ -375,7 +375,8 @@ pub fn generate_config() {
         let json_data = json!({
             "main_privkey": privkey.display_secret().to_string(),
             "relay": [],
-            "contact": []
+            "contact": [],
+            "public_inbox_privkey": "13bad4c07bdea3a3397e7f52824d77c8a01b8edcc328f0ca5dd8e2540df5efb5",
         });
         fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
         println!("Config file created");
@@ -385,7 +386,8 @@ pub fn generate_config() {
 }
 
 // todo: two function below can be refactored further
-pub fn add_contact(name: String, contact_pubkey: String) {
+// todo: what if one only wants to add pubkey (not name)
+pub fn add_contact(name: &str, contact_pubkey: &str) {
     let data = fs::read_to_string("clust.json").expect("Unable to read config file");
     let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
     let contact_iter = json_data["contact"].as_array().unwrap().iter();
