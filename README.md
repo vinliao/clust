@@ -29,7 +29,7 @@ Example private message event:
 }
 ```
 
-Notice the `pubkey` value? That's the public inbox. Public inbox is an agreed-upon keypair to sign things with. Yes, you read it right, it's keypair, which means anyone has access to the public inbox's private key. Don't worry, the messages are still safe; public inbox is just a central point for inbox to land on, so everyone can post and search on the same place - messages are still secured and encrypted by the shared key only both recipient and sender have.
+Notice the `pubkey` value? That's the public inbox. Public inbox is an agreed-upon keypair to sign things with. Yes, you read it right, it's a keypair, which means anyone has access to the public inbox's private key. Don't worry, the messages are still safe; public inbox is just a central point for inbox to land on, so everyone can post and search on the same place - messages are still secured and encrypted by the shared key only both recipient and sender have.
 
 Here's my dummy pubkey: `xyz`. Wanna chat?
 
@@ -51,11 +51,13 @@ Low-level APIs:
 - [x] `clust init`
 - [x] `clust generate-keypair`
 - [x] `clust set-private <key>`
+- [ ] `clust get-pubkey`
 - [x] `clust publish-raw <event>`
 - [x] `clust get-event <id>`
 - [x] `clust add-contact <name> <pubkey>`
 - [ ] `clust delete-contact <name>`
 - [x] `clust change-contact-pubkey <name> <pubkey>`
+- [ ] `clust change-contact-name <pubkey> <name>`
 
 Backend to-do:
 - [x] replace `schnorr_fun` with `secp256k1`
