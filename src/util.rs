@@ -455,6 +455,42 @@ pub fn change_contact_pubkey(name: String, contact_pubkey: String) {
     }
 }
 
+pub fn change_contact_name(name: String, contact_pubkey: String) {
+    let data = fs::read_to_string("clust.json").expect("Unable to read config file");
+    let mut json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");
+    let contact_iter = json_data["contact"].as_array().unwrap().iter();
+
+    // check whether name exists
+    let mut name_index = usize::MAX;
+    for (index, single_json) in contact_iter.enumerate() {
+        if single_json["name"] == contact_pubkey {
+            name_index = index;
+        }
+    }
+
+    if name_index == usize::MAX {
+        // if contact name doesn't exists
+        println!("Contact name doens't exist, add contact first!");
+    } else {
+        // if contact name exists, change contact pubkey
+        let mut changed_contact_json = json_data["contact"][name_index].clone();
+        changed_contact_json["name"] = serde_json::Value::String(name);
+
+        json_data["contact"]
+            .as_array_mut()
+            .unwrap()
+            .remove(name_index);
+
+        json_data["contact"]
+            .as_array_mut()
+            .unwrap()
+            .push(changed_contact_json);
+
+        fs::write("clust.json", json_data.to_string()).expect("Unable to write file");
+        println!("Successfully changed contact name");
+    }
+}
+
 pub fn contact_pubkey_from_name(name: &str) -> Option<String> {
     let data = fs::read_to_string("clust.json").expect("Unable to read config file");
     let json_data: serde_json::Value = serde_json::from_str(&data).expect("Fail to parse");

@@ -73,6 +73,8 @@ fn main() {
         add_new_contact();
     } else if args.command == "get-pubkey" {
         println!("Pubkey: {}", util::get_pubkey().to_string());
+    } else if args.command == "change-contact-name" {
+        util::change_contact_name(args.subcommand_2, args.subcommand);
     }
 }
 
