@@ -31,17 +31,17 @@ Example private message event:
 
 Notice the `pubkey` value? That's the public inbox. Public inbox is an agreed-upon keypair to sign things with. Yes, you read it right, it's a keypair, which means anyone has access to the public inbox's private key. Don't worry, the messages are still safe; public inbox is just a central point for inbox to land on, so everyone can post and search on the same place - messages are still secured and encrypted by the shared key only both recipient and sender have.
 
-Here's my dummy pubkey: `xyz`. Wanna chat?
+Here's my dummy pubkey: `5a5373396fe3fb30213adcc189a79d3c6d6c03b6a3e8320e6178a025e52e31c2`. Wanna chat?
 
 ## How to use
 This is very unstable and experimental. It's best to not use your "real identity."
 
 1. Clone repository
 2. `cargo run init` to initialize config file
-3. `cargo run add-contact vincent xyz`
+3. `cargo run add-contact vincent 5a5373396fe3fb30213adcc189a79d3c6d6c03b6a3e8320e6178a025e52e31c2`
 4. `cargo run chat vincent`
 
-(You can try requesting `["REQ", "foobar", {"#p", your_pubkey}]` or `["REQ", "foobar", {"#p", xyz}]` to relays. You won't see much.)
+(You can try requesting `["REQ", "foobar", {"#p", your_pubkey}]` or `["REQ", "foobar", {"#p", 5a5373396fe3fb30213adcc189a79d3c6d6c03b6a3e8320e6178a025e52e31c2}]` to relays. You won't see much.)
 
 APIs:
 - [x] `clust chat <name>`
