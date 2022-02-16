@@ -44,20 +44,20 @@ This is very unstable and experimental. It's best to not use your "real identity
 (You can try requesting `["REQ", "foobar", {"#p", your_pubkey}]` or `["REQ", "foobar", {"#p", xyz}]` to relays. You won't see much.)
 
 APIs:
-- [ ] `clust chat <name>`
-- [ ] `clust inbox`
+- [x] `clust chat <name>`
+- [x] `clust inbox`
 
 Low-level APIs:
 - [x] `clust init`
 - [x] `clust generate-keypair`
 - [x] `clust set-private <key>`
-- [ ] `clust get-pubkey`
+- [x] `clust get-pubkey`
 - [x] `clust publish-raw <event>`
 - [x] `clust get-event <id>`
 - [x] `clust add-contact <name> <pubkey>`
 - [ ] `clust delete-contact <name>`
 - [x] `clust change-contact-pubkey <name> <pubkey>`
-- [ ] `clust change-contact-name <pubkey> <name>`
+- [x] `clust change-contact-name <pubkey> <name>`
 
 Backend to-do:
 - [x] replace `schnorr_fun` with `secp256k1`
