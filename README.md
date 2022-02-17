@@ -41,7 +41,9 @@ This is very unstable and experimental. It's best to not use your "real identity
 3. `cargo run add-contact vincent 5a5373396fe3fb30213adcc189a79d3c6d6c03b6a3e8320e6178a025e52e31c2`
 4. `cargo run chat vincent`
 
-(You can try requesting `["REQ", "foobar", {"#p", your_pubkey}]` or `["REQ", "foobar", {"#p", 5a5373396fe3fb30213adcc189a79d3c6d6c03b6a3e8320e6178a025e52e31c2}]` to relays. You won't see much.)
+You can try requesting `["REQ", "foobar", {"#p", your_pubkey}]` or `["REQ", "foobar", {"#p", 5a5373396fe3fb30213adcc189a79d3c6d6c03b6a3e8320e6178a025e52e31c2}]` to relays. You won't see much.
+
+There's a GitHub issue to discuss this "public inbox" idea: [https://github.com/fiatjaf/nostr/issues/69](https://github.com/fiatjaf/nostr/issues/69).
 
 APIs:
 - [x] `clust chat <name>`
